@@ -51,4 +51,8 @@ out_path = os.path.join(DIR, 'app.bundle.js')
 with open(out_path, 'w', encoding='utf-8') as f:
     f.write(bundled_js)
 
-print(f"Successfully created standalone app.bundle.js ({len(bundled_js)} bytes)")
+out_path2 = os.path.join(DIR, 'app.v2.js')
+with open(out_path2, 'w', encoding='utf-8') as f:
+    f.write(bundled_js)
+
+print(f"Successfully created standalone app.bundle.js and app.v2.js ({len(bundled_js)} bytes)")

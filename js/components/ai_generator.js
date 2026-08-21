@@ -43,7 +43,7 @@ export class AiGeneratorModal {
 
         <div class="modal-body" style="gap: 1.15rem;">
           <!-- Section 1: Google Gemini Account & Key Connection Card -->
-          <div style="background: linear-gradient(135deg, rgba(24, 30, 48, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border: 2px solid #3b82f6; border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);">
+          <div id="ai-api-key-card" style="background: linear-gradient(135deg, rgba(24, 30, 48, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border: 2px solid #3b82f6; border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15); transition: all 0.3s ease;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
               <div style="font-weight: 800; font-size: 0.98rem; color: #60a5fa; display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 1.2rem;">🔑</span>
@@ -54,19 +54,27 @@ export class AiGeneratorModal {
               </a>
             </div>
 
-            <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
               <!-- API Key Input -->
-              <input type="password" class="form-input" id="ai-api-key" placeholder="បិទភ្ជាប់ Gemini API Key (ឧ. AQ... ឬ AIzaSy...)" value="${this.apiKey}" style="flex: 1; min-width: 280px; font-size: 0.88rem; padding: 0.5rem 0.85rem; border-color: rgba(59, 130, 246, 0.5);" />
+              <div style="position: relative; flex: 1; min-width: 260px; display: flex; align-items: center;">
+                <input type="password" class="form-input" id="ai-api-key" placeholder="បិទភ្ជាប់ Gemini API Key (ឧ. AQ... ឬ AIzaSy...)" value="${this.apiKey}" style="width: 100%; font-size: 0.88rem; padding: 0.5rem 2.4rem 0.5rem 0.85rem; border-color: rgba(59, 130, 246, 0.5);" />
+                <button type="button" id="btn-toggle-key-visibility" style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--text-muted);" title="បង្ហាញ/លាក់ Key">👁️</button>
+              </div>
 
               <!-- Connect / Test Button -->
               <button class="nav-btn btn-create" id="btn-test-api-key" style="font-size: 0.86rem; padding: 0.5rem 1.25rem; white-space: nowrap; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
-                <span>🔌</span> ភ្ជាប់គណនី Gemini
+                <span>🔌</span> ភ្ជាប់ និងចងចាំ Key
+              </button>
+
+              <!-- Clear Key Button -->
+              <button class="nav-btn btn-danger" id="btn-clear-api-key" style="font-size: 0.82rem; padding: 0.5rem 0.75rem; white-space: nowrap; ${this.apiKey ? '' : 'display: none;'}" title="លុប Key ចេញ">
+                <span>🗑️</span> លុប
               </button>
             </div>
 
             <!-- Status Indicator -->
             <div id="ai-key-status" style="font-size: 0.82rem; line-height: 1.4; padding-top: 0.2rem;">
-              ${this.apiKey ? '⏳ កំពុងត្រួតពិនិត្យការតភ្ជាប់ Gemini...' : '<span style="color: #94a3b8;">ℹ️ សូមបញ្ចូល Gemini API Key ដើម្បីឱ្យ AI អាចគិត និងបង្កើតសំណួរផ្ទាល់ជូនអ្នក។</span>'}
+              ${this.apiKey ? '⏳ កំពុងត្រួតពិនិត្យការតភ្ជាប់ Gemini...' : '<span style="color: #f87171; font-weight: 700;">⚠️ មិនទាន់មាន API Key នៅឡើយទេ។ សូមបញ្ចូល Gemini API Key ម្ដង ដើម្បីដំណើរការ AI។</span>'}
             </div>
 
             <!-- Quick Step-by-Step Help Drawer -->
@@ -75,7 +83,7 @@ export class AiGeneratorModal {
               <ol style="margin: 0.4rem 0 0 1.2rem; padding: 0; line-height: 1.5;">
                 <li>ចូលទៅកាន់ <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa;">aistudio.google.com/app/apikey</a></strong> (Login គណនី Google)</li>
                 <li>ចុចប៊ូតុង <strong>"+ Create API key"</strong> ➔ ចុច <strong>"Create key"</strong></li>
-                <li>ចុច <strong>"Copy key"</strong> រួចយកមក Paste ក្នុងប្រអប់ខាងលើ ហើយចុច <strong>"ភ្ជាប់គណនី Gemini"</strong>!</li>
+                <li>ចុច <strong>"Copy key"</strong> រួចយកមក Paste ក្នុងប្រអប់ខាងលើ ហើយចុច <strong>"ភ្ជាប់ និងចងចាំ Key"</strong>! (ប្រព័ន្ធនឹងចងចាំជានិច្ច មិនបាច់បញ្ចូលម្តងទៀតទេ)</li>
               </ol>
             </details>
           </div>
@@ -208,9 +216,48 @@ export class AiGeneratorModal {
 
     // API Key input change
     const keyInput = this.modalEl.querySelector('#ai-api-key');
+    const clearBtn = this.modalEl.querySelector('#btn-clear-api-key');
     keyInput?.addEventListener('input', (e) => {
       this.apiKey = e.target.value.trim();
-      localStorage.setItem('otpg_gemini_api_key', this.apiKey);
+      if (this.apiKey) {
+        localStorage.setItem('otpg_gemini_api_key', this.apiKey);
+        if (clearBtn) clearBtn.style.display = 'inline-flex';
+      } else {
+        localStorage.removeItem('otpg_gemini_api_key');
+        if (clearBtn) clearBtn.style.display = 'none';
+      }
+    });
+
+    // Toggle password visibility
+    const toggleBtn = this.modalEl.querySelector('#btn-toggle-key-visibility');
+    toggleBtn?.addEventListener('click', () => {
+      if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        toggleBtn.textContent = '🙈';
+      } else {
+        keyInput.type = 'password';
+        toggleBtn.textContent = '👁️';
+      }
+    });
+
+    // Clear API Key Button
+    clearBtn?.addEventListener('click', () => {
+      if (confirm("តើអ្នកពិតជាចង់លុប Gemini API Key ចេញពី Browser នេះមែនទេ?")) {
+        this.apiKey = '';
+        localStorage.removeItem('otpg_gemini_api_key');
+        if (keyInput) keyInput.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+        const statusEl = document.getElementById('ai-key-status');
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚠️ មិនទាន់មាន API Key នៅឡើយទេ។ សូមបញ្ចូល Gemini API Key ម្ដង ដើម្បីដំណើរការ AI។</span>`;
+        }
+        const cardEl = this.modalEl.querySelector('#ai-api-key-card');
+        if (cardEl) {
+          cardEl.style.borderColor = '#3b82f6';
+          cardEl.style.boxShadow = '0 4px 20px rgba(59, 130, 246, 0.15)';
+        }
+        sound.playPop();
+      }
     });
 
     // Test API Key Button
@@ -329,11 +376,18 @@ export class AiGeneratorModal {
     if (verified) {
       sound.playMatch();
       localStorage.setItem('otpg_gemini_api_key', this.apiKey);
+      const clearBtn = this.modalEl.querySelector('#btn-clear-api-key');
+      if (clearBtn) clearBtn.style.display = 'inline-flex';
+      const cardEl = this.modalEl.querySelector('#ai-api-key-card');
+      if (cardEl) {
+        cardEl.style.borderColor = '#10b981';
+        cardEl.style.boxShadow = '0 4px 20px rgba(16, 185, 129, 0.2)';
+      }
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color: #34d399; font-weight: 800;">🟢 គណនីបានភ្ជាប់ជោគជ័យ! Google Gemini Cloud (${this.activeModel}) រួចរាល់ក្នុងការបង្កើតសំណួរ។</span>`;
+        statusEl.innerHTML = `<span style="color: #34d399; font-weight: 800;">🟢 គណនីបានភ្ជាប់ជោគជ័យ និងចងចាំក្នុង Browser ជានិច្ច! Google Gemini Cloud (${this.activeModel}) រួចរាល់ក្នុងការបង្កើតសំណួរ។</span>`;
       }
       if (showSuccessAlert) {
-        alert(`✅ បានភ្ជាប់គណនី Google Gemini API (${this.activeModel}) ដោយជោគជ័យ!`);
+        alert(`✅ បានភ្ជាប់គណនី Google Gemini API (${this.activeModel}) ដោយជោគជ័យ! ប្រព័ន្ធបានចងចាំ Key នេះទុកក្នុង Browser រួចរាល់ ពេលក្រោយមិនបាច់បញ្ចូលម្តងទៀតទេ។`);
       }
     } else {
       this.isGeminiVerified = false;
@@ -405,6 +459,34 @@ export class AiGeneratorModal {
   }
 
   async generate() {
+    // Auto-sync API Key from input if typed or pasted
+    const inputKey = document.getElementById('ai-api-key')?.value.trim();
+    if (inputKey) {
+      this.apiKey = inputKey;
+      localStorage.setItem('otpg_gemini_api_key', inputKey);
+    }
+
+    // MANDATORY REQUIREMENT: Block generation if user has not entered an API Key!
+    if (!this.apiKey) {
+      sound.playWrong();
+      const statusEl = document.getElementById('ai-key-status');
+      const keyInput = document.getElementById('ai-api-key');
+      const cardEl = this.modalEl.querySelector('#ai-api-key-card');
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color: #ef4444; font-weight: 800;">⚠️ សូមបញ្ចូល Google Gemini API Key ជាមុនសិន! មុខងារ AI មិនអាចដំណើរការបានទេ ប្រសិនបើគ្មាន API Key។</span>`;
+      }
+      if (cardEl) {
+        cardEl.style.borderColor = '#ef4444';
+        cardEl.style.boxShadow = '0 0 25px rgba(239, 68, 68, 0.5)';
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (keyInput) {
+        keyInput.focus();
+      }
+      alert("⚠️ សូមបញ្ចូល Google Gemini API Key របស់អ្នកជាមុនសិន ទើបអាចប្រើប្រាស់មុខងារ AI Generator បាន!\n\n(អ្នកអាចចុចតំណភ្ជាប់ពណ៌លឿង 'aistudio.google.com/app/apikey' ដើម្បីយក Key ឥតគិតថ្លៃ ពី Google)");
+      return;
+    }
+
     const triggerBtn = document.getElementById('btn-trigger-ai-gen');
     const btnText = document.getElementById('btn-gen-text');
     const reviewSec = document.getElementById('ai-review-section');
@@ -440,30 +522,21 @@ export class AiGeneratorModal {
     if (progressBar) progressBar.style.width = '35%';
     sound.playPop();
 
-    // Auto-sync API Key from input if typed or pasted
-    const inputKey = document.getElementById('ai-api-key')?.value.trim();
-    if (inputKey) {
-      this.apiKey = inputKey;
-      localStorage.setItem('otpg_gemini_api_key', inputKey);
-    }
-
     let results = null;
 
-    // 1. If API Key is present, call Google Gemini Cloud API directly
-    if (this.apiKey) {
-      try {
-        if (thinkingStatus) thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
-        if (progressBar) progressBar.style.width = '70%';
+    // 1. Call Google Gemini Cloud API directly
+    try {
+      if (thinkingStatus) thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
+      if (progressBar) progressBar.style.width = '70%';
 
-        results = await this.callGeminiApi(userPrompt, count);
-        if (results && results.length > 0 && sourceBadge) {
-          sourceBadge.textContent = `Google Gemini (${this.activeModel}) ✨`;
-          sourceBadge.style.background = 'rgba(59, 130, 246, 0.25)';
-          sourceBadge.style.color = '#60a5fa';
-        }
-      } catch (err) {
-        console.warn("Gemini Cloud API call error:", err);
+      results = await this.callGeminiApi(userPrompt, count);
+      if (results && results.length > 0 && sourceBadge) {
+        sourceBadge.textContent = `Google Gemini (${this.activeModel}) ✨`;
+        sourceBadge.style.background = 'rgba(59, 130, 246, 0.25)';
+        sourceBadge.style.color = '#60a5fa';
       }
+    } catch (err) {
+      console.warn("Gemini Cloud API call error:", err);
     }
 
     // 2. If Gemini API was not connected or key failed, use accurate dynamic fallback
@@ -511,32 +584,28 @@ export class AiGeneratorModal {
       'gemma-4-26b-a4b-it'
     ];
 
-    const systemPrompt = `You are an expert Cambodian curriculum educational quiz generator.
+    const systemPrompt = `You are an expert educational quiz generator for students and teachers.
 User Requested Topic: "${promptText}".
-Target Count: Exactly ${count} questions.
+Target Question Count: Exactly ${count} questions.
 
-CRITICAL INSTRUCTION:
-- If the topic is Mathematics Addition (វិធីបូក): Generate ONLY addition problems (e.g. 45 + 35 = 80, 125 + 275 = 400) with strictly correct calculations.
-- If the topic is Mathematics Subtraction (វិធីដក): Generate ONLY subtraction problems.
-- If the topic is Mathematics Multiplication (វិធីគុណ): Generate ONLY multiplication problems.
-- If the topic is Mathematics Division (វិធីចែក): Generate ONLY division problems.
-- If the topic is Science (វិទ្យាសាស្ត្រ): Generate science and nature questions.
-- If the topic is History (ប្រវត្តិវិទ្យា): Generate Cambodian history questions.
-- If the topic is Khmer (ភាសាខ្មែរ): Generate Khmer grammar and literature questions.
-- Language: Khmer language.
-- Output: Strict JSON format ONLY. No markdown, no backticks.
+CRITICAL INSTRUCTIONS:
+1. Topic Match: Strictly create questions specifically matching the User Requested Topic: "${promptText}".
+- If the user requested English vocabulary, create English vocabulary learning questions (e.g. prompt English word, target Khmer meaning or vice-versa).
+- If Math, create strictly accurate math calculations.
+- If Science/History/Khmer/Animals, create relevant questions matching the topic.
+2. Output: Respond ONLY with valid, raw JSON (no markdown formatting, no code fences, no backticks).
 
-Structure:
+JSON Structure:
 {
-  "title": "Topic title in Khmer",
-  "category": "Subject category",
+  "title": "Topic Title",
+  "category": "Subject Category",
   "items": [
     {
-      "emoji": "📐",
-      "prompt": "Question in Khmer",
-      "target": "Correct answer in Khmer",
-      "hint": "Helpful hint in Khmer",
-      "distractors": ["Wrong answer 1 in Khmer", "Wrong answer 2 in Khmer", "Wrong answer 3 in Khmer"]
+      "emoji": "Relevant emoji (e.g. 🐶, 📐, 📚, 🔬)",
+      "prompt": "Question or prompt",
+      "target": "Correct answer",
+      "hint": "Helpful hint",
+      "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
     }
   ]
 }`;

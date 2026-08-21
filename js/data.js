@@ -54,7 +54,7 @@ export const SAMPLE_ACTIVITIES = [
         id: "item-pw-4",
         emoji: "🦒",
         prompt: "",
-        imagePrompt: "https://images.unsplash.com/photo-1538121644784-068307223b9d?w=400&auto=format&fit=crop&q=80",
+        imagePrompt: "https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=400&auto=format&fit=crop&q=80",
         target: "សត្វកវែង (Giraffe)",
         hint: "សត្វដែលមានកវែងជាងគេ"
       },

@@ -79,9 +79,17 @@ export class MatchUpGame {
       itemEl.className = 'matchup-item matchup-prompt';
       itemEl.dataset.idx = p.idx;
 
+      let imgHtml = '';
+      if (p.image) {
+        imgHtml = `<img src="${p.image}" class="matchup-item-img" alt="" onerror="this.style.display='none';" />`;
+      }
+
       itemEl.innerHTML = `
-        ${p.emoji ? `<span class="matchup-item-icon">${p.emoji}</span>` : ''}
-        <span class="matchup-item-text">${p.prompt}</span>
+        <div style="display: flex; align-items: center; gap: 0.65rem; overflow: hidden; flex: 1;">
+          ${imgHtml}
+          ${p.emoji ? `<span class="matchup-item-icon">${p.emoji}</span>` : ''}
+          <span class="matchup-item-text">${p.prompt || ''}</span>
+        </div>
         <span class="matchup-item-badge">👉</span>
       `;
 
@@ -99,9 +107,17 @@ export class MatchUpGame {
       itemEl.className = 'matchup-item matchup-target';
       itemEl.dataset.idx = t.idx;
 
+      let imgHtml = '';
+      if (t.image) {
+        imgHtml = `<img src="${t.image}" class="matchup-item-img" alt="" onerror="this.style.display='none';" />`;
+      }
+
       itemEl.innerHTML = `
         <span class="matchup-item-badge">👈</span>
-        <span class="matchup-item-text">${t.target}</span>
+        <div style="display: flex; align-items: center; gap: 0.65rem; overflow: hidden; flex: 1;">
+          ${imgHtml}
+          <span class="matchup-item-text">${t.target || ''}</span>
+        </div>
       `;
 
       itemEl.addEventListener('click', () => this.handleTargetSelect(itemEl, t.idx));
@@ -149,6 +165,12 @@ export class MatchUpGame {
       this.selectedPrompt.el.classList.add('matched');
       this.selectedTarget.el.classList.remove('selected');
       this.selectedTarget.el.classList.add('matched');
+
+      // Update badges to green checkmarks
+      const pBadge = this.selectedPrompt.el.querySelector('.matchup-item-badge');
+      const tBadge = this.selectedTarget.el.querySelector('.matchup-item-badge');
+      if (pBadge) pBadge.textContent = '✅';
+      if (tBadge) tBadge.textContent = '✅';
 
       this.matchedPairsCount++;
       this.score += 200;

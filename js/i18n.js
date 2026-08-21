@@ -148,7 +148,11 @@ export const translations = {
     btnApplyToGame: "🚀 អនុវត្ត និងលេងភ្លាមៗ",
     btnApplyToCreator: "✏️ យកទៅកែសម្រួលក្នុងស្ទូឌីយោ",
     fallbackNotice: "💡 កំពុងប្រើប្រាស់ឃ្លាំងចំណេះដឹងក្រៅបណ្តាញ (Offline Knowledge Bank) នៃកម្មវិធីសិក្សាកម្ពុជា។",
-    itemsCountBadge: "ធាតុ"
+    itemsCountBadge: "ធាតុ",
+    boxNumber: "ប្រអប់លេខ",
+    btnDone: "យល់ព្រម (Done)",
+    btnRevealAnswer: "👁️ បង្ហាញចម្លើយ",
+    btnHideAnswer: "🙈 លាក់ចម្លើយ"
   },
   
   en: {
@@ -294,7 +298,11 @@ export const translations = {
     btnApplyToGame: "🚀 Apply & Play Now",
     btnApplyToCreator: "✏️ Open in Creator Studio",
     fallbackNotice: "💡 Using Offline Knowledge Bank for Cambodian Curriculum.",
-    itemsCountBadge: "items"
+    itemsCountBadge: "items",
+    boxNumber: "Box #",
+    btnDone: "Done",
+    btnRevealAnswer: "👁️ Reveal Answer",
+    btnHideAnswer: "🙈 Hide Answer"
   }
 };
 

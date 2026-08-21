@@ -166,11 +166,13 @@ export class CreatorStudioModal {
             <button class="nav-btn img-preset-chip" data-kw="អង្គរវត្ត (Angkor Wat)">🏯 អង្គរវត្ត</button>
           </div>
 
-          <!-- Direct URL Paste Input -->
-          <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.25); border: 1px dashed var(--panel-border); border-radius: 10px; padding: 0.4rem 0.75rem;">
-            <span style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">🔗 Direct Link:</span>
-            <input type="text" class="form-input" id="img-direct-url-input" style="flex: 1; padding: 0.3rem 0.6rem; font-size: 0.8rem;" placeholder="https://example.com/photo.jpg" />
-            <button class="nav-btn" id="btn-use-direct-url" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;">ប្រើប្រាស់ Link</button>
+          <!-- Direct URL Paste & Local File Upload -->
+          <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.25); border: 1px dashed var(--panel-border); border-radius: 10px; padding: 0.4rem 0.75rem; flex-wrap: wrap;">
+            <span style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">🔗 Link / 📁 File:</span>
+            <input type="text" class="form-input" id="img-direct-url-input" style="flex: 1; min-width: 160px; padding: 0.3rem 0.6rem; font-size: 0.8rem;" placeholder="https://example.com/photo.jpg" />
+            <button class="nav-btn" id="btn-use-direct-url" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;">ប្រើ Link</button>
+            <input type="file" id="img-modal-file-upload" accept="image/*" style="display: none;" />
+            <button class="nav-btn" id="btn-modal-upload-file" style="padding: 0.3rem 0.6rem; font-size: 0.78rem;">📁 ជ្រើសរូបពី PC</button>
           </div>
 
           <!-- Multi-Image Selection Grid (4 Options) -->
@@ -236,6 +238,22 @@ export class CreatorStudioModal {
         sound.playMatch();
         if (this.imgGenCallback) this.imgGenCallback(url);
         this.closeImgGenModal();
+      }
+    });
+
+    // Upload from PC
+    const modalFileInput = this.imgGenModalEl.querySelector('#img-modal-file-upload');
+    this.imgGenModalEl.querySelector('#btn-modal-upload-file')?.addEventListener('click', () => modalFileInput?.click());
+    modalFileInput?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          sound.playMatch();
+          if (this.imgGenCallback) this.imgGenCallback(evt.target.result);
+          this.closeImgGenModal();
+        };
+        reader.readAsDataURL(file);
       }
     });
   }
@@ -471,7 +489,7 @@ export class CreatorStudioModal {
     const resultsGrid = this.imgGenModalEl.querySelector('#img-gen-results-grid');
     const selectBtn = this.imgGenModalEl.querySelector('#btn-select-generated-img');
 
-    if (input) input.value = initialKeyword;
+    if (input) input.value = initialKeyword || '';
     if (resultsGrid) {
       resultsGrid.innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); font-size: 0.88rem; padding: 2rem;">
@@ -484,8 +502,8 @@ export class CreatorStudioModal {
     this.imgGenModalEl.classList.add('active');
     sound.playPop();
 
-    if (initialKeyword) {
-      this.generateImages(initialKeyword);
+    if (initialKeyword && initialKeyword.trim()) {
+      this.generateImages(initialKeyword.trim());
     }
   }
 
@@ -494,73 +512,69 @@ export class CreatorStudioModal {
   }
 
   async translateKeyword(rawText) {
-    if (!rawText) return 'house home';
-    const clean = rawText.replace(/\(.*?\)/g, '').trim();
+    if (!rawText) return 'tiger';
 
-    // 1. Local high-speed Khmer-to-English dictionary
+    // 1. If text contains English inside parens e.g. "ខ្លា (Tiger)" or "ខ្លាធំ (Tiger)"
+    const parenMatch = rawText.match(/\(([a-zA-Z\s]+)\)/);
+    if (parenMatch && parenMatch[1] && parenMatch[1].trim()) {
+      return parenMatch[1].trim().toLowerCase();
+    }
+
+    const clean = rawText.replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+
+    // 2. Exact or partial dictionary lookup
     const dict = {
-      'ផ្ទះ': 'house modern house home building',
-      'ផ្ទះខ្មែរ': 'traditional Khmer wooden house Cambodia architecture',
-      'ផ្ទះឈើ': 'wooden house cottage home',
-      'ឡាន': 'car modern automobile vehicle',
-      'រថយន្ត': 'car vehicle automobile',
-      'កង់': 'bicycle bike cycling',
-      'ម៉ូតូ': 'motorcycle motorbike scooter',
-      'ដើមឈើ': 'green lush tree nature',
-      'ដើមដូង': 'tropical coconut palm tree',
-      'ផ្កា': 'beautiful blooming colorful flower',
-      'ផ្កាឈូក': 'pink lotus flower water lily',
-      'សាលារៀន': 'school building classroom',
-      'សៀវភៅ': 'open book reading study',
-      'ប៊ិច': 'writing ballpoint pen',
-      'ខ្មៅដៃ': 'wooden pencil',
-      'តុ': 'wooden study desk table',
-      'កៅអី': 'chair furniture',
-      'ខ្លា': 'tiger big cat wild animal',
-      'ខ្លាធំ': 'tiger wild predator animal',
-      'ដំរី': 'asian elephant animal wildlife',
-      'ស្វា': 'monkey sitting on branch',
-      'សត្វកវែង': 'giraffe tall animal',
-      'តោ': 'male lion predator wildlife',
-      'សេះ': 'majestic running horse',
-      'សេះបង្កង់': 'zebra animal stripes',
-      'ខ្លាឃ្មុំ': 'grizzly bear animal',
-      'កញ្ជ្រោង': 'red fox animal wildlife',
-      'មាន់': 'rooster chicken farm animal',
-      'មាន់ចែ': 'rooster farm bird',
-      'ទា': 'swimming duck bird',
-      'ទន្សាយ': 'cute fluffy rabbit bunny',
-      'ឆ្មា': 'cute kitten cat pet',
-      'ឆ្កែ': 'cute friendly dog puppy',
-      'គោ': 'cow cattle farm animal',
-      'ក្របី': 'water buffalo horn animal',
-      'ត្រី': 'tropical swimming fish aquarium',
-      'បក្សី': 'flying colorful bird',
-      'អង្គរវត្ត': 'Angkor Wat ancient temple Siem Reap Cambodia',
-      'ប្រាសាទអង្គរវត្ត': 'Angkor Wat ancient temple Siem Reap Cambodia',
-      'ប្រាសាទបាយ័ន': 'Bayon temple giant stone faces Cambodia',
-      'ប្រាសាទព្រះវិហារ': 'Preah Vihear temple mountain cliff Cambodia',
-      'ផ្លែប៉ោម': 'fresh red delicious apple fruit',
-      'ផ្លែចេក': 'yellow fresh banana fruit',
-      'ផ្លែស្វាយ': 'fresh ripe mango fruit',
-      'ផ្លែក្រូច': 'fresh orange fruit citrus',
-      'ផ្លែដូង': 'tropical coconut fruit',
-      'ព្រះអាទិត្យ': 'bright shining sun sky daylight',
-      'ព្រះចន្ទ': 'glowing full moon night sky',
-      'ពពក': 'fluffy white clouds blue sky',
-      'ភ្នំ': 'majestic green mountain peak landscape',
-      'ទន្លេ': 'clean flowing river nature landscape',
-      'សមុទ្រ': 'tropical blue ocean beach sea waves'
+      'ខ្លាធំ': 'tiger',
+      'ខ្លា': 'tiger',
+      'ដំរី': 'elephant',
+      'ស្វា': 'monkey',
+      'សត្វកវែង': 'giraffe',
+      'តោ': 'lion',
+      'សេះបង្កង់': 'zebra',
+      'សេះ': 'horse',
+      'ខ្លាឃ្មុំ': 'bear',
+      'កញ្ជ្រោង': 'fox',
+      'មាន់ចែ': 'rooster',
+      'មាន់': 'chicken',
+      'ទា': 'duck',
+      'ទន្សាយ': 'rabbit',
+      'ឆ្មា': 'cat',
+      'ឆ្កែ': 'dog',
+      'គោ': 'cow',
+      'ក្របី': 'water buffalo',
+      'ត្រី': 'fish',
+      'បក្សី': 'bird',
+      'ផ្ទះខ្មែរ': 'khmer house',
+      'ផ្ទះឈើ': 'wooden house',
+      'ផ្ទះ': 'house',
+      'ឡាន': 'car',
+      'រថយន្ត': 'car',
+      'កង់': 'bicycle',
+      'ម៉ូតូ': 'motorcycle',
+      'សាលារៀន': 'school building',
+      'សៀវភៅ': 'book',
+      'ដើមឈើ': 'tree',
+      'ដើមដូង': 'coconut tree',
+      'ផ្កាឈូក': 'lotus flower',
+      'ផ្កា': 'flower',
+      'ប្រាសាទអង្គរវត្ត': 'angkor wat',
+      'អង្គរវត្ត': 'angkor wat',
+      'ប្រាសាទបាយ័ន': 'bayon temple',
+      'ប្រាសាទព្រះវិហារ': 'preah vihear',
+      'ផ្លែប៉ោម': 'apple fruit',
+      'ផ្លែចេក': 'banana fruit',
+      'ផ្លែស្វាយ': 'mango fruit',
+      'ផ្លែក្រូច': 'orange fruit',
+      'ផ្លែដូង': 'coconut fruit'
     };
 
     if (dict[clean]) return dict[clean];
 
-    // Check partial matches in dictionary
     for (const [k, v] of Object.entries(dict)) {
-      if (clean.includes(k)) return v;
+      if (clean.includes(k) || k.includes(clean)) return v;
     }
 
-    // 2. Fetch live translation from Google Translate API
+    // 3. Google Translate API live translation if Khmer script
     if (/[\u1780-\u17FF]/.test(clean)) {
       try {
         const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(clean)}`);
@@ -568,7 +582,7 @@ export class CreatorStudioModal {
           const json = await res.json();
           const translated = json?.[0]?.[0]?.[0];
           if (translated && translated.trim().length > 0) {
-            return `${translated.trim()} ${clean}`;
+            return translated.trim().toLowerCase();
           }
         }
       } catch (e) {
@@ -576,7 +590,109 @@ export class CreatorStudioModal {
       }
     }
 
-    return clean;
+    return clean.toLowerCase();
+  }
+
+  getCuratedPhotos(keyword) {
+    const kw = (keyword || '').toLowerCase().trim();
+    const curated = {
+      'tiger': [
+        'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1500485035595-cbe6f645feb1?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1549480017-d76466a4b7e8?w=500&auto=format&fit=crop&q=80'
+      ],
+      'horse': [
+        'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80'
+      ],
+      'elephant': [
+        'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1581852017103-68ac65514cf7?w=500&auto=format&fit=crop&q=80'
+      ],
+      'monkey': [
+        'https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1574063413132-355dbfd83e25?w=500&auto=format&fit=crop&q=80'
+      ],
+      'giraffe': [
+        'https://images.unsplash.com/photo-1547721064-da6cfb341d50?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1538121609137-976420e0f899?w=500&auto=format&fit=crop&q=80'
+      ],
+      'lion': [
+        'https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=500&auto=format&fit=crop&q=80'
+      ],
+      'zebra': [
+        'https://images.unsplash.com/photo-1501706362039-c06b2d715385?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1526095179574-86e545346ae6?w=500&auto=format&fit=crop&q=80'
+      ],
+      'house': [
+        'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=500&auto=format&fit=crop&q=80'
+      ],
+      'car': [
+        'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500&auto=format&fit=crop&q=80'
+      ],
+      'school': [
+        'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=500&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500&auto=format&fit=crop&q=80'
+      ],
+      'book': [
+        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500&auto=format&fit=crop&q=80'
+      ],
+      'tree': [
+        'https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=500&auto=format&fit=crop&q=80'
+      ],
+      'lotus': [
+        'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop&q=80'
+      ],
+      'angkor': [
+        'https://images.unsplash.com/photo-1608657158784-0a373b9e4a39?w=500&auto=format&fit=crop&q=80'
+      ],
+      'apple': [
+        'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=500&auto=format&fit=crop&q=80'
+      ],
+      'cat': [
+        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=500&auto=format&fit=crop&q=80'
+      ],
+      'dog': [
+        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500&auto=format&fit=crop&q=80'
+      ],
+      'cow': [
+        'https://images.unsplash.com/photo-1546445317-29f4545e9d53?w=500&auto=format&fit=crop&q=80'
+      ],
+      'bear': [
+        'https://images.unsplash.com/photo-1589656966895-2f33e7653819?w=500&auto=format&fit=crop&q=80'
+      ]
+    };
+
+    for (const [k, urls] of Object.entries(curated)) {
+      if (kw.includes(k) || k.includes(kw)) return urls;
+    }
+    return [];
+  }
+
+  async fetchWikimediaImages(keyword) {
+    try {
+      const searchTerms = keyword.trim();
+      const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(searchTerms)}&gsrlimit=8&prop=imageinfo&iiprop=url|thumburl&iiurlwidth=500`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const pages = data?.query?.pages || {};
+      const imgUrls = [];
+      for (const pid in pages) {
+        const info = pages[pid]?.imageinfo?.[0];
+        const imgUrl = info?.thumburl || info?.url;
+        if (imgUrl && !imgUrl.endsWith('.svg') && !imgUrl.endsWith('.ogg') && !imgUrl.endsWith('.pdf') && !imgUrl.endsWith('.tif')) {
+          imgUrls.push(imgUrl);
+        }
+      }
+      return imgUrls;
+    } catch (e) {
+      console.warn("Wikimedia image fetch failed:", e);
+      return [];
+    }
   }
 
   async generateImages(rawKeyword) {
@@ -586,35 +702,46 @@ export class CreatorStudioModal {
     if (selectBtn) selectBtn.style.display = 'none';
     if (resultsGrid) {
       resultsGrid.innerHTML = `
-        <div style="grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 3rem;">
+        <div style="grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 2.5rem; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px dashed var(--panel-border);">
           <div style="font-size: 2.5rem; animation: spin 1.2s infinite linear;">🎨</div>
-          <div style="font-size: 0.95rem; color: var(--text-main); font-weight: 700;">${i18n.t('generatingImage')}</div>
-          <div style="font-size: 0.8rem; color: var(--text-muted);">ស្វែងរកសម្រាប់: "${rawKeyword}"</div>
+          <div style="font-size: 1rem; color: var(--text-main); font-weight: 700;">${i18n.t('generatingImage')}</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted);">ស្វែងរក និងបង្កើតរូបភាពសម្រាប់: <strong style="color: #6ee7b7;">"${rawKeyword}"</strong></div>
         </div>
       `;
     }
 
-    // Translate keyword accurately
+    // 1. Translate keyword
     const translatedPrompt = await this.translateKeyword(rawKeyword);
     const baseSeed = Math.floor(Math.random() * 9000) + 1000;
 
-    // 4 Distinct High-Resolution Visual Options:
+    // 2. Fetch instant curated photos + live Wikimedia photos in parallel
+    const curatedPhotos = this.getCuratedPhotos(translatedPrompt);
+    const wikiPhotos = await this.fetchWikimediaImages(translatedPrompt);
+
+    // Primary fallback photo is specific to the keyword
+    const fallbackPhoto = curatedPhotos[0] || wikiPhotos[0] || 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=500&auto=format&fit=crop&q=80';
+
+    // 3. Build comprehensive list of 4 options (Photo, AI Illustration, AI 3D, Art/Photo 2)
     const options = [
       {
-        type: '🎨 រូបគំនូរច្បាស់ (Illustration)',
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent(translatedPrompt + ', clean educational vector illustration, white background, vivid colors, masterpiece')}?width=400&height=400&nologo=true&seed=${baseSeed + 1}`
+        type: '📸 រូបភាពជាក់ស្តែង HD (Real Photo)',
+        url: curatedPhotos[0] || wikiPhotos[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent('high quality realistic photograph of ' + translatedPrompt + ', professional photography, sharp focus, 4k')}?width=500&height=500&nologo=true&seed=${baseSeed + 1}`,
+        fallback: fallbackPhoto
       },
       {
-        type: '📷 រូបភាពពិត (Realistic Photo)',
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent('high quality realistic photograph of ' + translatedPrompt + ', professional photography, sharp focus, 4k')}?width=400&height=400&nologo=true&seed=${baseSeed + 2}`
+        type: '🎨 រូបគំនូរច្បាស់ (Vector Art)',
+        url: `https://image.pollinations.ai/prompt/${encodeURIComponent(translatedPrompt + ', cute educational vector cartoon illustration, vivid colors, solid clean background, masterpiece')}?width=500&height=500&nologo=true&seed=${baseSeed + 2}`,
+        fallback: curatedPhotos[1] || wikiPhotos[1] || fallbackPhoto
       },
       {
-        type: '✨ 3D Render (Modern 3D)',
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent('cute 3d clay render of ' + translatedPrompt + ', smooth shading, bright lighting, clean background')}?width=400&height=400&nologo=true&seed=${baseSeed + 3}`
+        type: '✨ រូបភាព 3D (Clay 3D Render)',
+        url: `https://image.pollinations.ai/prompt/${encodeURIComponent('cute 3d clay render character of ' + translatedPrompt + ', bright studio lighting, soft shadows, cute')}?width=500&height=500&nologo=true&seed=${baseSeed + 3}`,
+        fallback: curatedPhotos[2] || curatedPhotos[0] || wikiPhotos[2] || fallbackPhoto
       },
       {
         type: '🖼️ រូបភាពសិល្បៈ (Detailed Art)',
-        url: `https://image.pollinations.ai/prompt/${encodeURIComponent('detailed vibrant digital art of ' + translatedPrompt + ', clear subject, studio lighting')}?width=400&height=400&nologo=true&seed=${baseSeed + 4}`
+        url: curatedPhotos[1] || wikiPhotos[1] || `https://image.pollinations.ai/prompt/${encodeURIComponent('detailed vibrant digital painting of ' + translatedPrompt + ', cinematic lighting, beautiful colors')}?width=500&height=500&nologo=true&seed=${baseSeed + 4}`,
+        fallback: fallbackPhoto
       }
     ];
 
@@ -625,23 +752,33 @@ export class CreatorStudioModal {
       const card = document.createElement('div');
       card.className = 'img-option-card';
       card.style.cssText = `
-        background: rgba(0,0,0,0.35);
+        background: rgba(15, 23, 42, 0.75);
         border: 2px solid var(--panel-border);
         border-radius: 12px;
         overflow: hidden;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.25s ease;
         display: flex;
         flex-direction: column;
         position: relative;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.3);
       `;
 
       card.innerHTML = `
-        <div style="position: relative; width: 100%; aspect-ratio: 1/1; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;">
-          <div class="img-loading-spinner" style="font-size: 1.5rem; position: absolute;">⏳</div>
-          <img src="${opt.url}" alt="${rawKeyword}" style="width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 2; opacity: 0; transition: opacity 0.3s ease;" onload="this.style.opacity=1; this.previousElementSibling.style.display='none';" onerror="this.src='https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&q=80';" />
+        <div style="position: relative; width: 100%; aspect-ratio: 1/1; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <div class="img-spinner" style="position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0.35rem; color: var(--text-muted); font-size: 0.75rem;">
+            <div style="font-size: 1.6rem; animation: spin 1.2s infinite linear;">⏳</div>
+            <span>កំពុងទាញយក...</span>
+          </div>
+          <img src="${opt.url}" alt="${rawKeyword}" style="width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 2; opacity: 0; transition: opacity 0.3s ease;" 
+            onload="this.style.opacity=1; const sp = this.parentElement.querySelector('.img-spinner'); if(sp) sp.style.display='none';" 
+            onerror="if(this.src !== '${opt.fallback}') { this.src = '${opt.fallback}'; } else { this.style.opacity=1; const sp = this.parentElement.querySelector('.img-spinner'); if(sp) sp.style.display='none'; }" 
+          />
+          <div class="img-selected-badge" style="position: absolute; top: 8px; right: 8px; z-index: 3; background: #10b981; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: none; align-items: center; justify-content: center; font-size: 0.85rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5);">
+            ✓
+          </div>
         </div>
-        <div style="padding: 0.4rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: var(--text-muted); text-align: center; background: rgba(0,0,0,0.3);">
+        <div style="padding: 0.5rem 0.6rem; font-size: 0.76rem; font-weight: 700; color: var(--text-main); text-align: center; background: rgba(0,0,0,0.4); border-top: 1px solid var(--panel-border);">
           ${opt.type}
         </div>
       `;
@@ -650,17 +787,25 @@ export class CreatorStudioModal {
         sound.playPop();
         resultsGrid.querySelectorAll('.img-option-card').forEach(c => {
           c.style.borderColor = 'var(--panel-border)';
-          c.style.boxShadow = 'none';
+          c.style.boxShadow = '0 4px 14px rgba(0,0,0,0.3)';
           c.style.transform = 'scale(1)';
+          const b = c.querySelector('.img-selected-badge');
+          if (b) b.style.display = 'none';
         });
 
-        card.style.borderColor = 'var(--accent-primary)';
-        card.style.boxShadow = '0 0 16px var(--panel-border-glow)';
+        card.style.borderColor = '#10b981';
+        card.style.boxShadow = '0 0 18px rgba(16, 185, 129, 0.45)';
         card.style.transform = 'scale(1.02)';
+        const badge = card.querySelector('.img-selected-badge');
+        if (badge) badge.style.display = 'flex';
 
-        this.selectedGeneratedImg = opt.url;
+        // Use the current rendered img src (which accounts for fallback)
+        const activeImg = card.querySelector('img');
+        this.selectedGeneratedImg = activeImg?.src || opt.url;
+
         if (selectBtn) {
           selectBtn.style.display = 'inline-flex';
+          selectBtn.innerHTML = `<span>✅</span> ${i18n.t('btnUseThisImage') || 'ប្រើប្រាស់រូបភាពនេះ'}`;
           selectBtn.onclick = () => {
             sound.playMatch();
             if (this.imgGenCallback) this.imgGenCallback(this.selectedGeneratedImg);

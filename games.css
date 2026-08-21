@@ -50,12 +50,17 @@
   text-align: center;
   border: 2px solid var(--card-border);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 /* Card Back (Hidden State) */
 .pair-card-back {
   background: var(--card-back-bg);
   color: var(--text-main);
+  transform: rotateY(0deg);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  z-index: 2;
 }
 
 .pair-card-back-pattern {
@@ -81,7 +86,20 @@
 .pair-card-front {
   background: var(--card-bg);
   transform: rotateY(180deg);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   border-color: var(--panel-border-glow);
+  z-index: 1;
+}
+
+.pair-card.flipped .pair-card-back,
+.pair-card.matched .pair-card-back {
+  z-index: 1;
+}
+
+.pair-card.flipped .pair-card-front,
+.pair-card.matched .pair-card-front {
+  z-index: 2;
 }
 
 .pair-card.matched .pair-card-front {
@@ -205,10 +223,51 @@
 }
 
 .matchup-item.matched {
-  border-color: var(--accent-primary);
-  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.08);
   pointer-events: none;
-  opacity: 0.85;
+  opacity: 0.45;
+  transform: scale(0.98);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.matchup-item.matched::after {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 50%;
+  height: 3px;
+  background: #ef4444;
+  border-radius: 2px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  animation: strikeThrough 0.35s ease forwards;
+}
+
+@keyframes strikeThrough {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 92%;
+    opacity: 1;
+  }
+}
+
+.matchup-item.matched .matchup-item-text {
+  text-decoration: line-through;
+  text-decoration-color: #ef4444;
+  text-decoration-thickness: 3px;
+  color: var(--text-muted);
+}
+
+.matchup-item.matched .matchup-item-icon,
+.matchup-item.matched .matchup-item-img {
+  filter: grayscale(0.8) opacity(0.5);
 }
 
 .matchup-item-text {
@@ -216,18 +275,37 @@
   font-weight: 600;
   color: var(--text-main);
   flex: 1;
+  word-break: break-word;
 }
 
 .matchup-item-icon {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.matchup-item-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--panel-border);
 }
 
 .matchup-item-badge {
   background: rgba(255, 255, 255, 0.1);
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.55rem;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.matchup-item.matched .matchup-item-badge {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
 /* ==========================================================================

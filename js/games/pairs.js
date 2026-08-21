@@ -67,7 +67,7 @@ export class MatchingPairsGame {
         pairId: index,
         type: 'target',
         text: item.target || '',
-        emoji: '',
+        emoji: item.emoji || '',
         image: item.imageTarget || ''
       });
     });
@@ -147,7 +147,8 @@ export class MatchingPairsGame {
       if (card.image) {
         frontContentHtml += `
           <div class="pair-card-img-wrap">
-            <img class="pair-card-img" src="${card.image}" alt="card image" loading="lazy" />
+            <img class="pair-card-img" src="${card.image}" alt="" loading="lazy" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';" />
+            <div class="pair-card-emoji" style="display:none;">${card.emoji || '🐾'}</div>
           </div>
         `;
       }

@@ -111,12 +111,14 @@ export class WordSearchGame {
       'ក', 'ខ', 'គ', 'ង', 'ច', 'ឆ', 'ជ', 'ញ', 'ដ', 'ត', 'ថ', 'ទ', 'ធ', 'ន',
       'ប', 'ផ', 'ព', 'ភ', 'ម', 'យ', 'រ', 'ល', 'វ', 'ស', 'ហ', 'អ'
     ];
+    this.customWordsList = false;
   }
 
   mount(container, activity, onComplete) {
     this.container = container;
     this.activity = activity;
     this.onComplete = onComplete;
+    this.customWordsList = false;
     this.initGame();
   }
 
@@ -127,37 +129,138 @@ export class WordSearchGame {
     this.isDragging = false;
     this.score = 0;
 
-    const rawItems = this.activity.items || [];
+    const rawItems = this.activity?.items || [];
     
-    // Extract words from target or prompt
-    let wordList = rawItems.map((item, idx) => {
-      const text = item.prompt?.trim() || item.target?.trim() || '';
-      const clean = text.replace(/\(.*?\)/g, '').trim();
-      const parts = segmentKhmerWord(clean);
-      return {
-        id: `word-${idx}`,
-        fullText: clean || 'ពាក្យ',
-        parts: parts.length > 0 ? parts : ['ពាក្យ'],
-        emoji: item.emoji || '📝',
-        found: false
-      };
-    }).filter(w => w.fullText.length > 0 && w.parts.length > 0);
+    // Smart word extraction: NEVER take long question sentences
+    let wordList = [];
 
-    if (wordList.length === 0) {
-      wordList = [
-        { id: 'w-0', fullText: 'សាលារៀន', parts: ['សា', 'លា', 'រៀន'], emoji: '🏫', found: false },
-        { id: 'w-1', fullText: 'ខ្លាធំ', parts: ['ខ្លា', 'ធំ'], emoji: '🐯', found: false },
-        { id: 'w-2', fullText: 'ដំរី', parts: ['ដំ', 'រី'], emoji: '🐘', found: false },
-        { id: 'w-3', fullText: 'ផ្ទះខ្មែរ', parts: ['ផ្ទះ', 'ខ្មែរ'], emoji: '🏡', found: false },
-        { id: 'w-4', fullText: 'សៀវភៅ', parts: ['សៀវ', 'ភៅ'], emoji: '📖', found: false }
-      ];
+    for (let idx = 0; idx < rawItems.length; idx++) {
+      const item = rawItems[idx];
+      let candidate = '';
+
+      // Prefer target (answer word) if prompt is a question sentence
+      const isPromptQuestion = item.prompt && (item.prompt.includes('?') || item.prompt.includes('តើ') || item.prompt.length > 15);
+      
+      if (item.target && item.target.trim().length > 0 && item.target.trim().length <= 20) {
+        candidate = item.target.trim();
+      } else if (item.prompt && !isPromptQuestion && item.prompt.trim().length <= 20) {
+        candidate = item.prompt.trim();
+      } else if (item.word && item.word.trim().length <= 20) {
+        candidate = item.word.trim();
+      }
+
+      if (candidate) {
+        const clean = candidate.replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+        if (clean.length > 0) {
+          const parts = segmentKhmerWord(clean);
+          if (parts.length > 0 && parts.length <= 8) {
+            wordList.push({
+              id: `word-${idx}`,
+              fullText: clean,
+              parts: parts,
+              emoji: item.emoji || '📝',
+              found: false
+            });
+          }
+        }
+      }
     }
 
-    this.wordsToFind = wordList.slice(0, 6); // Up to 6 words in 8x8 matrix
+    // Start with only 1 sample word by default unless user customized it
+    if (this.customWordsList) {
+      this.wordsToFind = wordList.slice(0, 6);
+    } else {
+      this.wordsToFind = wordList.slice(0, 1);
+    }
+
+    if (this.wordsToFind.length === 0) {
+      this.renderEmptyState();
+      return;
+    }
+
     this.buildGrid();
     this.render();
     this.updateHUD();
     this.startTimer();
+  }
+
+  renderEmptyState() {
+    this.stopTimer();
+    const emptyCard = document.createElement('div');
+    emptyCard.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      max-width: 680px;
+      margin: 1.5rem auto;
+      padding: 2.25rem 2rem;
+      background: rgba(0,0,0,0.35);
+      border: 2px dashed var(--panel-border);
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    `;
+
+    emptyCard.innerHTML = `
+      <div style="font-size: 3.5rem; line-height: 1;">🔠</div>
+      <div style="font-size: 1.35rem; font-weight: 800; color: var(--text-main);">
+        បង្កើតតារាងស្វែងរកពាក្យ (Word Search Creator)
+      </div>
+      <div style="font-size: 0.92rem; color: var(--text-muted); max-width: 520px; line-height: 1.5;">
+        សូមបញ្ចូលពាក្យ ឬឃ្លាដែលអ្នកចង់ស្វែងរកក្នុងតារាង ដោយប្រើសញ្ញាក្បៀស (,) ញែកពាក្យនីមួយៗ ឬចុចលើប្រធានបទគំរូខាងក្រោម៖
+      </div>
+
+      <div style="width: 100%; display: flex; flex-direction: column; gap: 0.65rem;">
+        <input type="text" id="ws-empty-input" class="form-input" placeholder="វាយពាក្យដោយក្បៀស (,) ឧ. សាលារៀន, ផ្ទះខ្មែរ, ដំរី, ខ្លា, ឆ្មា, គោ" style="font-size: 1rem; padding: 0.75rem 1rem; text-align: center;" />
+        
+        <!-- Preset Chips -->
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.25rem;">
+          <button class="nav-btn ws-preset-btn" data-words="ខ្លា, ដំរី, ស្វា, តោ, សេះ, ឆ្មា" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">🐯 សត្វព្រៃ</button>
+          <button class="nav-btn ws-preset-btn" data-words="សាលារៀន, សៀវភៅ, ប៊ិច, តុ, កៅអី, គ្រូបង្រៀន" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">🏫 សាលារៀន</button>
+          <button class="nav-btn ws-preset-btn" data-words="ផ្លែប៉ោម, ផ្លែចេក, ផ្លែស្វាយ, ផ្លែក្រូច, ផ្លែដូង" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">🍎 ផ្លែឈើ</button>
+          <button class="nav-btn ws-preset-btn" data-words="ដើមឈើ, ផ្កាឈូក, ព្រះអាទិត្យ, ពពក, ភ្នំ, ទន្លេ" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">🌿 ធម្មជាតិ</button>
+        </div>
+      </div>
+
+      <button class="nav-btn btn-create" id="btn-ws-submit-empty" style="font-size: 1.05rem; padding: 0.65rem 2.25rem; font-weight: 800; border-radius: 12px; margin-top: 0.5rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);">
+        <span>🚀</span> បង្កើតតារាងលេងភ្លាមៗ
+      </button>
+    `;
+
+    this.container.appendChild(emptyCard);
+
+    // Bind Preset Buttons
+    emptyCard.querySelectorAll('.ws-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sound.playPop();
+        const input = emptyCard.querySelector('#ws-empty-input');
+        if (input) {
+          input.value = btn.dataset.words;
+          input.focus();
+        }
+      });
+    });
+
+    // Bind Submit Button
+    const submitBtn = emptyCard.querySelector('#btn-ws-submit-empty');
+    const inputEl = emptyCard.querySelector('#ws-empty-input');
+
+    const handleCreate = () => {
+      const val = inputEl.value.trim();
+      if (!val) {
+        alert("សូមបញ្ចូលពាក្យយ៉ាងហោចណាស់ ២ ពាក្យ!");
+        inputEl.focus();
+        return;
+      }
+      this.updateWordsFromCommaList(val);
+    };
+
+    submitBtn?.addEventListener('click', handleCreate);
+    inputEl?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleCreate();
+    });
   }
 
   buildGrid() {
@@ -250,11 +353,14 @@ export class WordSearchGame {
     inputBar.innerHTML = `
       <div style="font-size: 0.92rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
         <span>✏️</span>
-        <span>កែសម្រួលពាក្យ/ល្បះ៖</span>
+        <span>ពាក្យ/ឃ្លា៖</span>
       </div>
       <input type="text" id="ws-custom-word-input" class="form-input" value="${currentWordsText}" style="flex: 1; min-width: 260px; padding: 0.45rem 0.85rem;" placeholder="វាយពាក្យដែលត្រូវស្វែងរក ដោយក្បៀស (,) ឧទាហរណ៍៖ សាលារៀន, ផ្ទះខ្មែរ, ដំរី, ខ្លាធំ" />
       <button class="nav-btn btn-create" id="btn-ws-generate-custom" style="padding: 0.45rem 1.1rem; font-size: 0.88rem;">
-        <span>💾</span> អាប់ដេតតារាងពាក្យ
+        <span>💾</span> អាប់ដេតតារាង
+      </button>
+      <button class="nav-btn btn-danger" id="btn-ws-clear-all" style="padding: 0.45rem 0.85rem; font-size: 0.88rem;" title="សម្អាតពាក្យ">
+        <span>🗑️</span> សម្អាត
       </button>
     `;
 
@@ -399,6 +505,14 @@ export class WordSearchGame {
       }
     });
 
+    // Bind Clear All Button
+    arena.querySelector('#btn-ws-clear-all')?.addEventListener('click', () => {
+      sound.playPop();
+      this.wordsToFind = [];
+      if (this.activity) this.activity.items = [];
+      this.renderEmptyState();
+    });
+
     // Bind Add Single Word Button
     arena.querySelector('#btn-ws-add-single-word')?.addEventListener('click', () => {
       const input = arena.querySelector('#ws-new-single-word-input');
@@ -473,10 +587,6 @@ export class WordSearchGame {
 
       // Delete Single Word Click
       itemEl.querySelector('.btn-delete-single-ws')?.addEventListener('click', () => {
-        if (this.wordsToFind.length <= 2) {
-          alert("ត្រូវមានយ៉ាងហោចណាស់ ២ ពាក្យក្នុងតារាង (Minimum 2 words required)");
-          return;
-        }
         this.deleteSingleWord(idx);
       });
 
@@ -487,8 +597,13 @@ export class WordSearchGame {
   }
 
   updateWordsFromCommaList(commaText) {
+    this.customWordsList = true;
     const list = commaText.split(',').map(s => s.trim()).filter(Boolean);
-    if (list.length === 0) return;
+    if (list.length === 0) {
+      this.wordsToFind = [];
+      this.renderEmptyState();
+      return;
+    }
 
     this.activity = {
       ...this.activity,

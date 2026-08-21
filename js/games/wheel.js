@@ -158,7 +158,15 @@ export class RandomWheelGame {
 
           <!-- Team Cards Grid -->
           <div id="teams-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-            <!-- Rendered team cards -->
+            <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem 1.5rem; background: rgba(0,0,0,0.2); border: 2px dashed var(--panel-border); border-radius: 16px;">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎲</div>
+              <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">
+                ឧបករណ៍បែងចែកក្រុមសិស្សដោយចៃដន្យ (Random Team Generator)
+              </div>
+              <div style="font-size: 0.88rem; color: var(--text-muted);">
+                សូមជ្រើសរើសចំនួនក្រុមដែលចង់បាន រួចចុចប៊ូតុង <strong>"🎲 ចែកក្រុមដោយចៃដន្យ"</strong> ខាងលើដើម្បីចាប់ផ្តើម!
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -197,14 +205,35 @@ export class RandomWheelGame {
         </div>
 
         <!-- Wheel Settings -->
-        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 10px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.25rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <label class="form-label" style="margin: 0;" data-i18n="spinDurationLabel">${i18n.t('spinDurationLabel')}</label>
-            <span id="spin-duration-val" style="font-weight: 700; color: var(--accent-secondary);">5s</span>
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.95rem; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.4rem;">
+            <label class="form-label" style="margin: 0; font-weight: 700;" data-i18n="spinDurationLabel">⏱️ ${i18n.t('spinDurationLabel')}</label>
+            <span id="spin-duration-val" style="font-weight: 800; color: #38bdf8; font-size: 0.95rem;">${this.spinDuration}s</span>
           </div>
-          <input type="range" id="wheel-duration-slider" min="2" max="15" value="5" step="1" style="cursor: pointer;" />
 
-          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-main); cursor: pointer;">
+          <!-- Duration Direct Input & Unit Selector -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="number" id="wheel-duration-input" min="1" max="600" value="${this.spinDuration}" class="form-input" style="flex: 1; padding: 0.45rem 0.65rem; text-align: center; font-weight: 700; font-size: 0.95rem;" placeholder="បញ្ចូលចំនួន..." />
+            <select id="wheel-duration-unit" class="form-select" style="width: 105px; padding: 0.45rem 0.6rem; font-size: 0.85rem;">
+              <option value="sec" selected>វិនាទី (s)</option>
+              <option value="min">នាទី (min)</option>
+            </select>
+          </div>
+
+          <!-- Quick Preset Chips -->
+          <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <button class="nav-btn wheel-dur-preset" data-sec="3" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⚡ 3s</button>
+            <button class="nav-btn wheel-dur-preset" data-sec="5" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⚡ 5s</button>
+            <button class="nav-btn wheel-dur-preset" data-sec="10" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⏱️ 10s</button>
+            <button class="nav-btn wheel-dur-preset" data-sec="15" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⏱️ 15s</button>
+            <button class="nav-btn wheel-dur-preset" data-sec="30" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⏳ 30s</button>
+            <button class="nav-btn wheel-dur-preset" data-sec="60" style="padding: 0.25rem 0.55rem; font-size: 0.76rem;">⏳ 1 នាទី</button>
+          </div>
+
+          <!-- Slider -->
+          <input type="range" id="wheel-duration-slider" min="1" max="60" value="${Math.min(60, this.spinDuration)}" step="1" style="cursor: pointer; width: 100%;" />
+
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-main); cursor: pointer; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem;">
             <input type="checkbox" id="wheel-auto-eliminate-chk" style="width: 16px; height: 16px; cursor: pointer;" />
             <span data-i18n="autoEliminateLabel">${i18n.t('autoEliminateLabel')}</span>
           </label>
@@ -245,7 +274,6 @@ export class RandomWheelGame {
       paneWheel.style.display = 'none';
       paneGroups.style.display = 'flex';
       this.currentTab = 'groups';
-      this.generateTeams();
     });
 
     // Spin Button
@@ -283,12 +311,58 @@ export class RandomWheelGame {
     document.getElementById('btn-trigger-excel-import')?.addEventListener('click', () => fileInput?.click());
     fileInput?.addEventListener('change', (e) => this.handleExcelFileImport(e));
 
-    // Spin Duration Slider
+    // Spin Duration Sync Controls
+    const durInput = document.getElementById('wheel-duration-input');
+    const durUnit = document.getElementById('wheel-duration-unit');
     const slider = document.getElementById('wheel-duration-slider');
     const durVal = document.getElementById('spin-duration-val');
+
+    const updateDuration = (valInCurrentUnit) => {
+      const unit = durUnit ? durUnit.value : 'sec';
+      let sec = parseFloat(valInCurrentUnit) || 5;
+      if (unit === 'min') {
+        sec = Math.round(sec * 60);
+      }
+      sec = Math.max(1, Math.min(600, sec)); // 1 sec to 10 mins
+      this.spinDuration = sec;
+      localStorage.setItem('otpg_wheel_duration', sec);
+
+      if (durVal) {
+        if (sec >= 60) {
+          const mins = (sec / 60).toFixed(1).replace('.0', '');
+          durVal.textContent = `${sec}s (${mins} នាទី)`;
+        } else {
+          durVal.textContent = `${sec}s`;
+        }
+      }
+      if (slider) {
+        slider.value = Math.min(60, sec);
+      }
+    };
+
+    durInput?.addEventListener('input', (e) => {
+      updateDuration(e.target.value);
+    });
+
+    durUnit?.addEventListener('change', () => {
+      if (durInput) updateDuration(durInput.value);
+    });
+
     slider?.addEventListener('input', (e) => {
-      this.spinDuration = parseInt(e.target.value, 10);
-      if (durVal) durVal.textContent = `${this.spinDuration}s`;
+      const sec = parseInt(e.target.value, 10);
+      if (durUnit) durUnit.value = 'sec';
+      if (durInput) durInput.value = sec;
+      updateDuration(sec);
+    });
+
+    this.container.querySelectorAll('.wheel-dur-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sound.playPop();
+        const sec = parseInt(btn.dataset.sec, 10);
+        if (durUnit) durUnit.value = 'sec';
+        if (durInput) durInput.value = sec;
+        updateDuration(sec);
+      });
     });
 
     // Auto Eliminate Checkbox
@@ -301,11 +375,14 @@ export class RandomWheelGame {
     const selectGroup = document.getElementById('select-group-count');
     selectGroup?.addEventListener('change', (e) => {
       this.groupCount = parseInt(e.target.value, 10);
-      this.generateTeams();
+      if (this.currentGeneratedGroups && this.currentGeneratedGroups.length > 0) {
+        this.generateTeams();
+      }
     });
 
     document.getElementById('btn-do-generate-groups')?.addEventListener('click', () => {
-      sound.playPop();
+      sound.playMatch();
+      particles.fireConfetti();
       this.generateTeams();
     });
 
