@@ -5076,12 +5076,19 @@ class AiGeneratorModal {
     if (progressBar) progressBar.style.width = '35%';
     sound.playPop();
 
+    // Auto-sync API Key from input if typed or pasted
+    const inputKey = document.getElementById('ai-api-key')?.value.trim();
+    if (inputKey) {
+      this.apiKey = inputKey;
+      localStorage.setItem('otpg_gemini_api_key', inputKey);
+    }
+
     let results = null;
 
     // 1. If API Key is present, call Google Gemini Cloud API directly
     if (this.apiKey) {
       try {
-        if (thinkingStatus) thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងរៀបចំសំណួរចម្លើយ...`;
+        if (thinkingStatus) thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
         if (progressBar) progressBar.style.width = '70%';
 
         results = await this.callGeminiApi(userPrompt, count);
@@ -5135,8 +5142,8 @@ class AiGeneratorModal {
       this.activeModel || 'gemini-3.7-flash',
       'gemini-3.6-flash',
       'gemini-3.5-flash',
-      'gemini-2.5-flash',
-      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-3.1-flash-lite',
       'gemma-4-26b-a4b-it'
     ];
 
