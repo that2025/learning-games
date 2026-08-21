@@ -3439,7 +3439,7 @@ class RandomWheelGame {
 function segmentKhmerWord(text) {
   if (!text) return [];
   // Clean punctuation and English inside brackets (e.g. "ខ្លាធំ (Tiger)" ➔ "ខ្លាធំ")
-  const clean = text.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+  const clean = text.replace(/\(.*?\)/g, '').replace(/[\[\]{}"',.!?;:()]/g, '').trim();
   if (!clean) return [];
 
   // 1. Precise dictionary for common educational words
@@ -3467,50 +3467,46 @@ function segmentKhmerWord(text) {
     'ផ្លែប៉ោម': ['ផ្លែ', 'ប៉ោម'],
     'ផ្លែចេក': ['ផ្លែ', 'ចេក'],
     'ផ្លែស្វាយ': ['ផ្លែ', 'ស្វាយ'],
+    'ផ្លែក្រូច': ['ផ្លែ', 'ក្រូច'],
+    'ផ្លែដូង': ['ផ្លែ', 'ដូង'],
     'ព្រះអាទិត្យ': ['ព្រះ', 'អា', 'ទិត្យ'],
     'ព្រះចន្ទ': ['ព្រះ', 'ចន្ទ'],
     'ទន្សាយ': ['ទន្សាយ'],
+    'មាន់ចែ': ['មាន់', 'ចែ'],
     'មាន់': ['មាន់'],
+    'ទា': ['ទា'],
     'តោ': ['តោ'],
-    'សេះ': ['សេះ']
+    'សេះបង្កង់': ['សេះ', 'បង្កង់'],
+    'សេះ': ['សេះ'],
+    'ឆ្មា': ['ឆ្មា'],
+    'ឆ្កែ': ['ឆ្កែ'],
+    'គោ': ['គោ'],
+    'ក្របី': ['ក្រ', 'បី'],
+    'ត្រី': ['ត្រី'],
+    'បក្សី': ['បក្សី'],
+    'ខ្លាឃ្មុំ': ['ខ្លា', 'ឃ្មុំ'],
+    'កញ្ជ្រោង': ['កញ្ជ្រោង']
   };
 
   if (dict[clean]) return dict[clean];
 
-  // 2. Intelligent Regex for Khmer Syllable & Cluster splitting
-  const khmerSyllablePattern = /(?:[\u1780-\u17B3](?:\u17D2[\u1780-\u17B3])*(?:[\u17B4-\u17D3])*(?:[\u1780-\u17B3](?:\u17D2[\u1780-\u17B3])*(?:[\u17C6-\u17D3]))?)/gu;
-
-  // Try Intl.Segmenter with word granularity
+  // 2. Intl.Segmenter with grapheme clusters for Khmer (keeps Consonant + Coeng + Vowel intact)
   if (typeof Intl !== 'undefined' && Intl.Segmenter) {
     try {
-      const segWord = new Intl.Segmenter('km', { granularity: 'word' });
-      const words = Array.from(segWord.segment(clean), s => s.segment).filter(s => s.trim().length > 0);
-      
-      const syllables = [];
-      for (const w of words) {
-        if (dict[w]) {
-          syllables.push(...dict[w]);
-          continue;
-        }
-        const matches = w.match(khmerSyllablePattern);
-        if (matches && matches.length > 0) {
-          syllables.push(...matches);
-        } else {
-          // Fallback to grapheme cluster
-          const segGrapheme = new Intl.Segmenter('km', { granularity: 'grapheme' });
-          syllables.push(...Array.from(segGrapheme.segment(w), s => s.segment));
-        }
-      }
-      if (syllables.length > 0) return syllables;
+      const segGrapheme = new Intl.Segmenter('km', { granularity: 'grapheme' });
+      const clusters = Array.from(segGrapheme.segment(clean), s => s.segment).filter(s => s.trim().length > 0);
+      if (clusters.length > 0) return clusters;
     } catch (e) {
       console.warn("Intl segmentation fallback:", e);
     }
   }
 
+  // 3. Fallback syllable regex
+  const khmerSyllablePattern = /(?:[\u1780-\u17B3](?:\u17D2[\u1780-\u17B3])*(?:[\u17B4-\u17D3])*(?:[\u1780-\u17B3](?:\u17D2[\u1780-\u17B3])*(?:[\u17C6-\u17D3]))?)/gu;
   const matches = clean.match(khmerSyllablePattern);
   if (matches && matches.length > 0) return matches;
 
-  return Array.from(clean);
+  return [clean];
 }
 
 class WordSearchGame {
@@ -3573,7 +3569,7 @@ class WordSearchGame {
       }
 
       if (candidate) {
-        const clean = candidate.replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+        const clean = candidate.replace(/\(.*?\)/g, '').replace(/[\[\]{}"',.!?;:()]/g, '').trim();
         if (clean.length > 0) {
           const parts = segmentKhmerWord(clean);
           if (parts.length > 0 && parts.length <= 8) {
@@ -6260,7 +6256,7 @@ class CreatorStudioModal {
       return parenMatch[1].trim().toLowerCase();
     }
 
-    const clean = rawText.replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+    const clean = rawText.replace(/\(.*?\)/g, '').replace(/[\[\]{}"',.!?;:()]/g, '').trim();
 
     // 2. Exact or partial dictionary lookup
     const dict = {

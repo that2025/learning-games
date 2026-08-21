@@ -520,7 +520,7 @@ export class CreatorStudioModal {
       return parenMatch[1].trim().toLowerCase();
     }
 
-    const clean = rawText.replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+    const clean = rawText.replace(/\(.*?\)/g, '').replace(/[\[\]{}"',.!?;:()]/g, '').trim();
 
     // 2. Exact or partial dictionary lookup
     const dict = {
