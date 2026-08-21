@@ -4692,7 +4692,7 @@ class AiGeneratorModal {
 
             <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
               <!-- API Key Input -->
-              <input type="password" class="form-input" id="ai-api-key" placeholder="បិទភ្ជាប់ Gemini API Key ដែលផ្ដើមដោយ AIzaSy... នៅទីនេះ" value="${this.apiKey}" style="flex: 1; min-width: 280px; font-size: 0.88rem; padding: 0.5rem 0.85rem; border-color: rgba(59, 130, 246, 0.5);" />
+              <input type="password" class="form-input" id="ai-api-key" placeholder="បិទភ្ជាប់ Gemini API Key (ឧ. AQ... ឬ AIzaSy...)" value="${this.apiKey}" style="flex: 1; min-width: 280px; font-size: 0.88rem; padding: 0.5rem 0.85rem; border-color: rgba(59, 130, 246, 0.5);" />
 
               <!-- Connect / Test Button -->
               <button class="nav-btn btn-create" id="btn-test-api-key" style="font-size: 0.86rem; padding: 0.5rem 1.25rem; white-space: nowrap; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">
@@ -4702,7 +4702,7 @@ class AiGeneratorModal {
 
             <!-- Status Indicator -->
             <div id="ai-key-status" style="font-size: 0.82rem; line-height: 1.4; padding-top: 0.2rem;">
-              ${this.apiKey ? '⏳ កំពុងត្រួតពិនិត្យការតភ្ជាប់ Gemini...' : '<span style="color: #94a3b8;">ℹ️ សូមបញ្ចូល Gemini API Key (ផ្ដើមដោយ <code>AIzaSy...</code>) ដើម្បីឱ្យ AI អាចគិត និងបង្កើតសំណួរផ្ទាល់ជូនអ្នក។</span>'}
+              ${this.apiKey ? '⏳ កំពុងត្រួតពិនិត្យការតភ្ជាប់ Gemini...' : '<span style="color: #94a3b8;">ℹ️ សូមបញ្ចូល Gemini API Key ដើម្បីឱ្យ AI អាចគិត និងបង្កើតសំណួរផ្ទាល់ជូនអ្នក។</span>'}
             </div>
 
             <!-- Quick Step-by-Step Help Drawer -->
@@ -4710,8 +4710,8 @@ class AiGeneratorModal {
               <summary style="cursor: pointer; font-weight: 700; color: #cbd5e1;">📖 របៀបយក Gemini API Key ក្នុងរយៈពេល ៣០ វិនាទី (ចុចដើម្បីមើល)</summary>
               <ol style="margin: 0.4rem 0 0 1.2rem; padding: 0; line-height: 1.5;">
                 <li>ចូលទៅកាន់ <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa;">aistudio.google.com/app/apikey</a></strong> (Login គណនី Google)</li>
-                <li>ចុចប៊ូតុងពណ៌ខៀវ <strong>"+ Create API key"</strong> ➔ ជ្រើសរើស <strong>"Create API key in new project"</strong></li>
-                <li>ចុច <strong>"Copy"</strong> លើកូដដែលផ្ដើមដោយ <strong><code>AIzaSy...</code></strong> រួចយកមក Paste ក្នុងប្រអប់ខាងលើ ហើយចុច <strong>"ភ្ជាប់គណនី Gemini"</strong>!</li>
+                <li>ចុចប៊ូតុង <strong>"+ Create API key"</strong> ➔ ចុច <strong>"Create key"</strong></li>
+                <li>ចុច <strong>"Copy key"</strong> រួចយកមក Paste ក្នុងប្រអប់ខាងលើ ហើយចុច <strong>"ភ្ជាប់គណនី Gemini"</strong>!</li>
               </ol>
             </details>
           </div>
@@ -4906,30 +4906,60 @@ class AiGeneratorModal {
     const statusEl = document.getElementById('ai-key-status');
     if (!this.apiKey) {
       this.isGeminiVerified = false;
-      if (statusEl) statusEl.innerHTML = `<span style="color: #f59e0b;">ℹ️ សូមបញ្ចូល Gemini API Key (ផ្ដើមដោយ <code>AIzaSy...</code>)</span>`;
+      if (statusEl) statusEl.innerHTML = `<span style="color: #f59e0b;">ℹ️ សូមបញ្ចូល Gemini API Key</span>`;
       return;
     }
 
     if (statusEl) statusEl.innerHTML = `⏳ កំពុងតេស្តភ្ជាប់ទៅកាន់ <strong>Google Gemini Cloud API</strong>...`;
 
-    const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro'];
+    const candidateModels = [
+      'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemma-4-26b-a4b-it',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
     let verified = false;
 
-    for (const m of models) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${this.apiKey}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: 'Ping test' }] }] })
-        });
-        if (res.ok) {
-          this.activeModel = m;
+    // First try querying model list to discover valid models directly
+    try {
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}`;
+      const listRes = await fetch(listUrl);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const available = (listData.models || []).map(m => m.name.replace('models/', ''));
+        const matched = candidateModels.find(m => available.includes(m)) || available.find(m => m.includes('flash') || m.includes('gemini'));
+        if (matched) {
+          this.activeModel = matched;
           this.isGeminiVerified = true;
           verified = true;
-          break;
         }
-      } catch (e) {}
+      }
+    } catch (e) {
+      console.warn("Model list check warning:", e);
+    }
+
+    // Fallback: ping candidate models directly
+    if (!verified) {
+      for (const m of candidateModels) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${this.apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: 'Ping' }] }] })
+          });
+          if (res.ok) {
+            this.activeModel = m;
+            this.isGeminiVerified = true;
+            verified = true;
+            break;
+          }
+        } catch (e) {}
+      }
     }
 
     if (verified) {
@@ -4947,11 +4977,11 @@ class AiGeneratorModal {
       if (statusEl) {
         statusEl.innerHTML = `
           <span style="color: #f87171; font-weight: 700;">❌ API Key មិនត្រឹមត្រូវ (Google API បានបដិសេធ)។</span>
-          <span style="color: #fbbf24; display: block; font-size: 0.78rem;">💡 សូមប្រាកដថាអ្នកបានចុច "Create API key" នៅ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa; text-decoration: underline;">aistudio.google.com</a> ដើម្បីចម្លង Key ដែលផ្ដើមដោយ <code>AIzaSy...</code></span>
+          <span style="color: #fbbf24; display: block; font-size: 0.78rem;">💡 សូមប្រាកដថាអ្នកបានចុច "Create API key" នៅ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #60a5fa; text-decoration: underline;">aistudio.google.com</a> រួច Copy Key មក Paste ម្ដងទៀត។</span>
         `;
       }
       if (showSuccessAlert) {
-        alert("❌ Gemini API Key មិនត្រឹមត្រូវ។ សូមប្រាកដថា Key របស់អ្នកផ្ដើមដោយអក្សរ AIzaSy... ដែលបានបង្កើតពី aistudio.google.com");
+        alert("❌ Gemini API Key មិនត្រឹមត្រូវ ឬមិនទាន់ដំណើរការ។ សូមពិនិត្យមើល Key របស់អ្នកឡើងវិញ។");
       }
     }
   }
@@ -5102,10 +5132,12 @@ class AiGeneratorModal {
   // --- Live Google Gemini Cloud API Caller ---
   async callGeminiApi(promptText, count) {
     const modelsToTry = [
-      this.activeModel || 'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro'
+      this.activeModel || 'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemma-4-26b-a4b-it'
     ];
 
     const systemPrompt = `You are an expert Cambodian curriculum educational quiz generator.
