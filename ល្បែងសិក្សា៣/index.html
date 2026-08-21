@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ល្បែងសិក្សាអូរតាប្រុក (Ou Ta Pruk Educational Games) - កម្មវិធីល្បែងសិក្សាអន្តរកម្មតាមបែប Wordwall ទំនើប ជាមួយប្រព័ន្ធ AI បង្កើតសំណួរស្វ័យប្រវត្ត" />
+  <meta name="keywords" content="Wordwall, Khmer educational games, ល្បែងសិក្សា, អូរតាប្រុក, AI Quiz, Matching Pairs, Word Search, Flashcards" />
+  <meta name="author" content="Ou Ta Pruk Education" />
+  <title>ល្បែងសិក្សាអូរតាប្រុក | Ou Ta Pruk Learning Games</title>
+
+  <!-- Favicon & Brand Icon -->
+  <link rel="icon" type="image/png" href="Logo 2.png" />
+
+  <!-- Google Fonts: Kantumruy Pro, Moul, Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Moul&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+
+  <!-- PDF.js CDN for client-side PDF document text & OCR rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- SheetJS (xlsx) CDN for Excel student roster import -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Core Stylesheets (Compatible with both root and /css folder) -->
+  <link rel="stylesheet" href="bundle.css" />
+  <link rel="stylesheet" href="themes.css" />
+  <link rel="stylesheet" href="main.css" />
+  <link rel="stylesheet" href="games.css" />
+  <link rel="stylesheet" href="css/themes.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/games.css" />
+</head>
+<body data-theme="jungle">
+
+  <!-- Fullscreen Particle Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div id="app-root">
+    <!-- Top Sticky Navbar -->
+    <header class="navbar">
+      <div class="navbar-container">
+        <!-- Brand Left -->
+        <div class="navbar-brand" id="nav-brand-logo">
+          <img src="Logo 2.png" alt="Ou Ta Pruk Logo" class="brand-logo" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px; flex-shrink: 0;" />
+          <div class="brand-info">
+            <h1 class="brand-title" data-i18n="brandTitle">ល្បែងសិក្សា អូរតាប្រុក</h1>
+            <span class="brand-subtitle" data-i18n="brandSubtitle">Ou Ta Pruk Learning Games</span>
+          </div>
+        </div>
+
+        <!-- Center: Activity Quick Dropdown -->
+        <div class="navbar-center">
+          <div class="activity-dropdown-wrap">
+            <select id="activity-select" class="activity-select" title="Select Lesson"></select>
+            <button id="btn-open-activity-manager" class="btn-open-manager" title="គ្រប់គ្រងមេរៀន (Activity Library)">📚</button>
+          </div>
+        </div>
+
+        <!-- Right: Utility Controls & Actions -->
+        <div class="navbar-controls">
+          <!-- Language Toggle Button -->
+          <button id="btn-toggle-lang" class="nav-btn">🇰🇭 ភាសាខ្មែរ</button>
+
+          <!-- Theme Selector -->
+          <select id="theme-select" class="theme-select">
+            <option value="jungle">🌿 Jungle Forest</option>
+            <option value="classic">🎨 Classic Colorful</option>
+            <option value="cosmic">🌌 Cosmic Space</option>
+            <option value="neon">⚡ Arcade Neon</option>
+          </select>
+
+          <!-- Sound & Fullscreen Buttons -->
+          <button id="btn-toggle-sound" class="nav-btn nav-btn-icon" title="Sound Toggle">🔊</button>
+          <button id="btn-toggle-fullscreen" class="nav-btn nav-btn-icon" title="Fullscreen">⛶</button>
+
+          <!-- Primary CTA Buttons -->
+          <input type="file" id="nav-file-import-json" accept=".json" style="display: none;" />
+          <button id="btn-nav-import-file" class="nav-btn" title="បើកឯកសារមេរៀនពីកុំព្យូទ័រ">
+            <span>📂</span> <span data-i18n="btnImportFile">បើកឯកសារ</span>
+          </button>
+          <button id="btn-nav-export-file" class="nav-btn" title="ទាញយកមេរៀននេះទុកក្នុងកុំព្យូទ័រ">
+            <span>💾</span> <span data-i18n="btnSaveToPc">រក្សាទុក File</span>
+          </button>
+          <button id="btn-nav-ai-gen" class="nav-btn btn-ai">
+            <span>✨</span> <span data-i18n="aiGenerator">AI Generator</span>
+          </button>
+          <button id="btn-nav-edit-act" class="nav-btn btn-edit">
+            <span>✏️</span> <span data-i18n="editContent">កែសម្រួល</span>
+          </button>
+          <button id="btn-nav-create-act" class="nav-btn btn-create">
+            <span>➕</span> <span data-i18n="createNew">បង្កើតថ្មី</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- 1. Game Templates Bar (Wordwall Switcher) -->
+      <section class="template-bar-section">
+        <div class="template-bar-header">
+          <div class="template-bar-title">
+            <span>🎮</span>
+            <span data-i18n="templateBarTitle">ទម្រង់ហ្គេម (Game Templates):</span>
+          </div>
+          <div class="template-bar-subtitle" data-i18n="templateBarSubtitle">
+            ចុចប្តូរភ្លាមៗលើទិន្នន័យមេរៀនដែលកំពុងលេង
+          </div>
+        </div>
+
+        <div class="template-switcher-grid">
+          <!-- 1. Matching Pairs -->
+          <button class="template-card-btn active" data-template="pairs">
+            <span class="template-icon">🎴</span>
+            <div>
+              <div data-i18n="tmplPairs">បណ្ណផ្គូផ្គង</div>
+            </div>
+          </button>
+
+          <!-- 2. Match Up -->
+          <button class="template-card-btn" data-template="match">
+            <span class="template-icon">🧩</span>
+            <div>
+              <div data-i18n="tmplMatch">ផ្គូផ្គង</div>
+            </div>
+          </button>
+
+          <!-- 3. Quiz Gameshow -->
+          <button class="template-card-btn" data-template="quiz">
+            <span class="template-icon">🎯</span>
+            <div>
+              <div data-i18n="tmplQuiz">សំណួរចម្លើយ</div>
+            </div>
+          </button>
+
+          <!-- 4. Open The Box -->
+          <button class="template-card-btn" data-template="box">
+            <span class="template-icon">📦</span>
+            <div>
+              <div data-i18n="tmplBox">បើកប្រអប់</div>
+            </div>
+          </button>
+
+          <!-- 5. Random Wheel -->
+          <button class="template-card-btn" data-template="wheel">
+            <span class="template-icon">🎡</span>
+            <div>
+              <div data-i18n="tmplWheel">កង់វិលសំណាង</div>
+            </div>
+          </button>
+
+          <!-- 6. Word Search -->
+          <button class="template-card-btn" data-template="wordsearch">
+            <span class="template-icon">🔠</span>
+            <div>
+              <div data-i18n="tmplWordSearch">ស្វែងរកពាក្យ</div>
+            </div>
+          </button>
+
+          <!-- 7. Whack-a-Mole -->
+          <button class="template-card-btn" data-template="whack">
+            <span class="template-icon">🐹</span>
+            <div>
+              <div data-i18n="tmplWhack">វាយសត្វកណ្តុរ</div>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. Game Arena Container -->
+      <section class="game-arena-wrapper">
+        <!-- Arena Header (Title, Category, Item count) -->
+        <div class="arena-header">
+          <div class="arena-title-group">
+            <div class="arena-activity-title" id="arena-act-title">
+              🐯 🦊 សត្វព្រៃ និងលក្ខណៈសម្គាល់
+            </div>
+            <div class="arena-activity-desc" id="arena-act-desc">
+              ស្វែងយល់ពីសត្វព្រៃ សំឡេង និងចំណុចសម្គាល់របស់ពួកវា
+            </div>
+          </div>
+          <div class="arena-badges">
+            <span class="arena-badge category" id="arena-cat-badge">វិទ្យាសាស្ត្រ និងធម្មជាតិ</span>
+            <span class="arena-badge" id="arena-items-badge">8 ធាតុ</span>
+          </div>
+        </div>
+
+        <!-- In-Game HUD (Stats & Live Counters) -->
+        <div class="arena-hud">
+          <div class="hud-stats-group">
+            <div class="hud-stat-item">
+              <span class="stat-icon">🎯</span>
+              <span data-i18n="matchedPairs">ផ្គូផ្គងបាន:</span>
+              <span class="hud-stat-value hud-stat-highlight" id="hud-stat-matched">0 / 8 គូ</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="stat-icon">🔄</span>
+              <span data-i18n="movesCount">ចំនួនបើក:</span>
+              <span class="hud-stat-value" id="hud-stat-moves">0 ដង</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="stat-icon">⭐</span>
+              <span data-i18n="scoreCount">ពិន្ទុ:</span>
+              <span class="hud-stat-value hud-stat-highlight" id="hud-stat-score">0</span>
+            </div>
+          </div>
+
+          <div>
+            <button class="btn-hud-action" id="btn-hud-reshuffle">
+              <span>🔀</span> <span data-i18n="reshuffle">ច្របល់កាតឡើងវិញ</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Game Stage (Viewports mount dynamically) -->
+        <div class="arena-stage" id="arena-stage-container">
+          <!-- Game Engine Viewport Mounted Here -->
+        </div>
+
+        <!-- In-Game Action Bar (Bottom Toolbar) -->
+        <div class="in-game-toolbar">
+          <button class="toolbar-btn btn-ai" id="tb-btn-ai">
+            <span>✨</span> <span data-i18n="tbAiGen">AI Generator</span>
+          </button>
+          <button class="toolbar-btn" id="tb-btn-edit">
+            <span>✏️</span> <span data-i18n="tbEdit">កែសម្រួលមាតិកា</span>
+          </button>
+          <button class="toolbar-btn btn-create" id="tb-btn-export-file">
+            <span>💾</span> <span data-i18n="btnSaveToPc">ទាញយកឯកសារ (Save File)</span>
+          </button>
+          <button class="toolbar-btn" id="tb-btn-import-file">
+            <span>📂</span> <span data-i18n="btnImportFile">បើកឯកសារ (Open File)</span>
+          </button>
+          <button class="toolbar-btn" id="tb-btn-duplicate">
+            <span>📋</span> <span data-i18n="tbDuplicate">ចម្លងទុក</span>
+          </button>
+          <button class="toolbar-btn btn-danger" id="tb-btn-delete" style="display: none;">
+            <span>🗑️</span> <span data-i18n="tbDelete">លុបល្បែង</span>
+          </button>
+          <button class="toolbar-btn" id="tb-btn-shuffle">
+            <span>🔀</span> <span data-i18n="tbShuffle">ច្របល់</span>
+          </button>
+          <button class="toolbar-btn btn-primary" id="tb-btn-restart">
+            <span>🔄</span> <span data-i18n="tbRestart">ចាប់ផ្តើមឡើងវិញ</span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Main ES6 Module Entry Point -->
+  <script type="module" src="js/app.js?v=1400"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+/* ==========================================================================
+   Theme Definitions & Color Palettes for Ou Ta Pruk Educational Games
+   4 Themes: Jungle Forest, Classic Colorful, Cosmic Space, Arcade Neon
+   ========================================================================== */
+
+:root,
+body[data-theme="jungle"] {
+  --bg-gradient: radial-gradient(circle at 50% 10%, #0d4a38 0%, #062b20 50%, #031711 100%);
+  --bg-color: #05231a;
+  --panel-bg: rgba(6, 43, 32, 0.72);
+  --panel-bg-hover: rgba(13, 74, 56, 0.85);
+  --panel-border: rgba(52, 211, 153, 0.22);
+  --panel-border-glow: rgba(52, 211, 153, 0.45);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(16, 185, 129, 0.12);
+  
+  --navbar-bg: rgba(4, 31, 23, 0.88);
+  --navbar-border: rgba(52, 211, 153, 0.2);
+  
+  --template-bar-bg: rgba(3, 23, 17, 0.65);
+  --template-btn-bg: rgba(6, 43, 32, 0.6);
+  --template-btn-active: #059669;
+  --template-btn-active-glow: 0 0 22px rgba(16, 185, 129, 0.55);
+  
+  --arena-bg: rgba(4, 33, 24, 0.75);
+  --arena-border: rgba(52, 211, 153, 0.2);
+  --arena-header-bg: rgba(3, 25, 18, 0.85);
+  
+  --card-bg: rgba(16, 61, 48, 0.8);
+  --card-border: rgba(52, 211, 153, 0.3);
+  --card-hover: rgba(22, 85, 67, 0.95);
+  --card-back-bg: linear-gradient(135deg, #047857 0%, #064e3b 100%);
+  --card-matched: #10b981;
+  
+  --accent-primary: #10b981;
+  --accent-primary-hover: #059669;
+  --accent-secondary: #f59e0b;
+  --accent-secondary-hover: #d97706;
+  --accent-purple: #8b5cf6;
+  --accent-danger: #ef4444;
+  --accent-danger-glow: 0 0 16px rgba(239, 68, 68, 0.6);
+  --accent-cyan: #06b6d4;
+  
+  --text-main: #f0fdf4;
+  --text-muted: #a7f3d0;
+  --text-dim: #6ee7b7;
+  --text-inverse: #022c22;
+  
+  --hud-badge-bg: rgba(3, 27, 20, 0.8);
+  --hud-badge-border: rgba(52, 211, 153, 0.25);
+  
+  --theme-icon: '🌿';
+}
+
+body[data-theme="classic"] {
+  --bg-gradient: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 50%, #020617 100%);
+  --bg-color: #0b1120;
+  --panel-bg: rgba(30, 41, 59, 0.72);
+  --panel-bg-hover: rgba(51, 65, 85, 0.85);
+  --panel-border: rgba(99, 102, 241, 0.25);
+  --panel-border-glow: rgba(99, 102, 241, 0.5);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.15);
+  
+  --navbar-bg: rgba(15, 23, 42, 0.88);
+  --navbar-border: rgba(99, 102, 241, 0.22);
+  
+  --template-bar-bg: rgba(15, 23, 42, 0.65);
+  --template-btn-bg: rgba(30, 41, 59, 0.6);
+  --template-btn-active: #4f46e5;
+  --template-btn-active-glow: 0 0 22px rgba(99, 102, 241, 0.55);
+  
+  --arena-bg: rgba(15, 23, 42, 0.75);
+  --arena-border: rgba(99, 102, 241, 0.22);
+  --arena-header-bg: rgba(15, 23, 42, 0.88);
+  
+  --card-bg: rgba(30, 41, 59, 0.8);
+  --card-border: rgba(99, 102, 241, 0.35);
+  --card-hover: rgba(51, 65, 85, 0.95);
+  --card-back-bg: linear-gradient(135deg, #4338ca 0%, #312e81 100%);
+  --card-matched: #38bdf8;
+  
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --accent-secondary: #f59e0b;
+  --accent-secondary-hover: #d97706;
+  --accent-purple: #a855f7;
+  --accent-danger: #ef4444;
+  --accent-danger-glow: 0 0 16px rgba(239, 68, 68, 0.6);
+  --accent-cyan: #38bdf8;
+  
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
+  --text-dim: #94a3b8;
+  --text-inverse: #0f172a;
+  
+  --hud-badge-bg: rgba(15, 23, 42, 0.85);
+  --hud-badge-border: rgba(99, 102, 241, 0.3);
+  
+  --theme-icon: '🎨';
+}
+
+body[data-theme="cosmic"] {
+  --bg-gradient: radial-gradient(circle at 50% 10%, #2e1065 0%, #0f0728 50%, #030014 100%);
+  --bg-color: #070216;
+  --panel-bg: rgba(36, 17, 72, 0.72);
+  --panel-bg-hover: rgba(59, 27, 116, 0.85);
+  --panel-border: rgba(192, 132, 252, 0.25);
+  --panel-border-glow: rgba(216, 70, 239, 0.5);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 24px rgba(216, 70, 239, 0.2);
+  
+  --navbar-bg: rgba(15, 7, 36, 0.88);
+  --navbar-border: rgba(192, 132, 252, 0.22);
+  
+  --template-bar-bg: rgba(15, 7, 36, 0.65);
+  --template-btn-bg: rgba(36, 17, 72, 0.6);
+  --template-btn-active: #9333ea;
+  --template-btn-active-glow: 0 0 22px rgba(168, 85, 247, 0.6);
+  
+  --arena-bg: rgba(18, 9, 44, 0.75);
+  --arena-border: rgba(192, 132, 252, 0.22);
+  --arena-header-bg: rgba(15, 7, 36, 0.88);
+  
+  --card-bg: rgba(43, 19, 86, 0.8);
+  --card-border: rgba(192, 132, 252, 0.35);
+  --card-hover: rgba(69, 31, 138, 0.95);
+  --card-back-bg: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+  --card-matched: #d946ef;
+  
+  --accent-primary: #a855f7;
+  --accent-primary-hover: #9333ea;
+  --accent-secondary: #f43f5e;
+  --accent-secondary-hover: #e11d48;
+  --accent-purple: #c084fc;
+  --accent-danger: #f43f5e;
+  --accent-danger-glow: 0 0 16px rgba(244, 63, 94, 0.6);
+  --accent-cyan: #38bdf8;
+  
+  --text-main: #faf5ff;
+  --text-muted: #e9d5ff;
+  --text-dim: #c084fc;
+  --text-inverse: #190638;
+  
+  --hud-badge-bg: rgba(15, 7, 36, 0.85);
+  --hud-badge-border: rgba(192, 132, 252, 0.3);
+  
+  --theme-icon: '🌌';
+}
+
+body[data-theme="neon"] {
+  --bg-gradient: radial-gradient(circle at 50% 10%, #180828 0%, #0a0414 50%, #030008 100%);
+  --bg-color: #08080f;
+  --panel-bg: rgba(20, 15, 35, 0.8);
+  --panel-bg-hover: rgba(32, 24, 55, 0.9);
+  --panel-border: rgba(244, 63, 94, 0.35);
+  --panel-border-glow: rgba(6, 182, 212, 0.6);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(244, 63, 94, 0.25);
+  
+  --navbar-bg: rgba(10, 8, 20, 0.92);
+  --navbar-border: rgba(6, 182, 212, 0.35);
+  
+  --template-bar-bg: rgba(10, 8, 20, 0.7);
+  --template-btn-bg: rgba(20, 15, 35, 0.7);
+  --template-btn-active: #06b6d4;
+  --template-btn-active-glow: 0 0 22px rgba(6, 182, 212, 0.7);
+  
+  --arena-bg: rgba(12, 9, 25, 0.8);
+  --arena-border: rgba(244, 63, 94, 0.3);
+  --arena-header-bg: rgba(10, 8, 20, 0.92);
+  
+  --card-bg: rgba(25, 18, 45, 0.85);
+  --card-border: rgba(6, 182, 212, 0.4);
+  --card-hover: rgba(40, 30, 70, 0.95);
+  --card-back-bg: linear-gradient(135deg, #0891b2 0%, #4f46e5 100%);
+  --card-matched: #f43f5e;
+  
+  --accent-primary: #06b6d4;
+  --accent-primary-hover: #0891b2;
+  --accent-secondary: #f43f5e;
+  --accent-secondary-hover: #e11d48;
+  --accent-purple: #a855f7;
+  --accent-danger: #f43f5e;
+  --accent-danger-glow: 0 0 18px rgba(244, 63, 94, 0.8);
+  --accent-cyan: #06b6d4;
+  
+  --text-main: #ffffff;
+  --text-muted: #a5f3fc;
+  --text-dim: #67e8f9;
+  --text-inverse: #08080f;
+  
+  --hud-badge-bg: rgba(10, 8, 20, 0.9);
+  --hud-badge-border: rgba(6, 182, 212, 0.4);
+  
+  --theme-icon: '⚡';
+}
