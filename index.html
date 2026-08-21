@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="km">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="ល្បែងសិក្សាអូរតាប្រុក (Ou Ta Pruk Educational Games) - កម្មវិធីល្បែងសិក្សាអន្តរកម្មតាមបែប Wordwall ទំនើប ជាមួយប្រព័ន្ធ AI បង្កើតសំណួរស្វ័យប្រវត្ត" />
-  <meta name="keywords" content="Wordwall, Khmer educational games, ល្បែងសិក្សា, អូរតាប្រុក, AI Quiz, Matching Pairs, Word Search, Flashcards" />
+  <meta name="description"
+    content="ល្បែងសិក្សាអូរតាប្រុក (Ou Ta Pruk Educational Games) - កម្មវិធីល្បែងសិក្សាអន្តរកម្មតាមបែប Wordwall ទំនើប ជាមួយប្រព័ន្ធ AI បង្កើតសំណួរស្វ័យប្រវត្ត" />
+  <meta name="keywords"
+    content="Wordwall, Khmer educational games, ល្បែងសិក្សា, អូរតាប្រុក, AI Quiz, Matching Pairs, Word Search, Flashcards" />
   <meta name="author" content="Ou Ta Pruk Education" />
   <title>ល្បែងសិក្សាអូរតាប្រុក | Ou Ta Pruk Learning Games</title>
 
@@ -14,7 +17,9 @@
   <!-- Google Fonts: Kantumruy Pro, Moul, Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Moul&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Moul&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+    rel="stylesheet" />
 
   <!-- PDF.js CDN for client-side PDF document text & OCR rendering -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -28,14 +33,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- Core Stylesheets (Compatible with both root and /css folder) -->
-  <link rel="stylesheet" href="bundle.css" />
-  <link rel="stylesheet" href="themes.css" />
-  <link rel="stylesheet" href="main.css" />
-  <link rel="stylesheet" href="games.css" />
-  <link rel="stylesheet" href="css/themes.css" />
-  <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="css/games.css" />
+  <link rel="stylesheet" href="bundle.css?v=20260821v2" />
+  <link rel="stylesheet" href="themes.css?v=20260821v2" />
+  <link rel="stylesheet" href="main.css?v=20260821v2" />
+  <link rel="stylesheet" href="games.css?v=20260821v2" />
+  <link rel="stylesheet" href="css/themes.css?v=20260821v2" />
+  <link rel="stylesheet" href="css/main.css?v=20260821v2" />
+  <link rel="stylesheet" href="css/games.css?v=20260821v2" />
 </head>
+
 <body data-theme="jungle">
 
   <!-- Fullscreen Particle Confetti Canvas -->
@@ -47,7 +53,8 @@
       <div class="navbar-container">
         <!-- Brand Left -->
         <div class="navbar-brand" id="nav-brand-logo">
-          <img src="Logo 2.png" alt="Ou Ta Pruk Logo" class="brand-logo" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px; flex-shrink: 0;" />
+          <img src="Logo 2.png" alt="Ou Ta Pruk Logo" class="brand-logo"
+            style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px; flex-shrink: 0;" />
           <div class="brand-info">
             <h1 class="brand-title" data-i18n="brandTitle">ល្បែងសិក្សា អូរតាប្រុក</h1>
             <span class="brand-subtitle" data-i18n="brandSubtitle">Ou Ta Pruk Learning Games</span>
@@ -58,7 +65,8 @@
         <div class="navbar-center">
           <div class="activity-dropdown-wrap">
             <select id="activity-select" class="activity-select" title="Select Lesson"></select>
-            <button id="btn-open-activity-manager" class="btn-open-manager" title="គ្រប់គ្រងមេរៀន (Activity Library)">📚</button>
+            <button id="btn-open-activity-manager" class="btn-open-manager"
+              title="គ្រប់គ្រងមេរៀន (Activity Library)">📚</button>
           </div>
         </div>
 
@@ -254,7 +262,8 @@
     </main>
   </div>
 
-  <!-- Main ES6 Module Entry Point -->
-  <script type="module" src="js/app.js?v=1400"></script>
+  <!-- Standalone Unified Bundle Entry Point -->
+  <script src="app.bundle.js?v=20260821v2"></script>
 </body>
+
 </html>
