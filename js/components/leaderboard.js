@@ -20,39 +20,48 @@ export class ScorecardModal {
     this.modalEl = document.createElement('div');
     this.modalEl.className = 'modal-overlay';
     this.modalEl.id = 'modal-scorecard';
+    this.modalEl.style.zIndex = '1100';
 
     this.modalEl.innerHTML = `
-      <div class="modal-window" style="max-width: 500px; text-align: center;">
-        <div class="modal-body" style="padding: 2.25rem 1.75rem; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
-          <div id="scorecard-icon" style="font-size: 3.8rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));">🏆</div>
-          <div id="scorecard-title" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">
-            ${i18n.t('victoryTitle')}
+      <div class="modal-window" style="max-width: 480px; text-align: center; position: relative; border: 1px solid var(--panel-border); box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <!-- Top Right Close Button (X) -->
+        <button class="modal-close-btn" id="btn-close-scorecard" title="បិទ (Close)" style="position: absolute; top: 12px; right: 14px; z-index: 10; font-size: 1.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; color: var(--text-main); cursor: pointer; transition: all 0.2s ease;">
+          &times;
+        </button>
+
+        <div class="modal-body" style="padding: 2.25rem 1.75rem 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+          <div id="scorecard-icon" style="font-size: 4rem; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4)); animation: bounce 1.5s infinite;">🏆</div>
+          <div id="scorecard-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); line-height: 1.4;">
+            🎉 អបអរសាទរ! អ្នកបានឈ្នះហើយ!
           </div>
 
           <!-- Stats Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; margin: 0.5rem 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; margin: 0.35rem 0;">
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('finalScore')}</div>
-              <div id="scorecard-score" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-secondary);">0</div>
+              <div id="scorecard-lbl-score" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ពិន្ទុសរុប</div>
+              <div id="scorecard-score" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-secondary); margin-top: 0.15rem;">0</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('accuracyRate')}</div>
-              <div id="scorecard-accuracy" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-primary);">100%</div>
+              <div id="scorecard-lbl-accuracy" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ភាពត្រឹមត្រូវ</div>
+              <div id="scorecard-accuracy" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-primary); margin-top: 0.15rem;">100%</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('timeSpent')}</div>
-              <div id="scorecard-time" style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">00:00</div>
+              <div id="scorecard-lbl-time" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">រយៈពេលលេង</div>
+              <div id="scorecard-time" style="font-size: 1.35rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">00:00</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('bestStreak')}</div>
-              <div id="scorecard-streak" style="font-size: 1.25rem; font-weight: 700; color: #f43f5e;">🔥 0</div>
+              <div id="scorecard-lbl-streak" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ពិន្ទុបន្តបន្ទាប់</div>
+              <div id="scorecard-streak" style="font-size: 1.35rem; font-weight: 700; color: #f43f5e; margin-top: 0.15rem;">🔥 0</div>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
-          <button class="nav-btn btn-create" id="btn-scorecard-play-again" style="padding: 0.6rem 1.5rem; font-size: 0.95rem;">
-            ${i18n.t('playAgain')}
+        <div class="modal-footer" style="justify-content: center; gap: 0.85rem; padding-bottom: 1.5rem; flex-wrap: wrap;">
+          <button class="nav-btn btn-secondary" id="btn-scorecard-close" style="padding: 0.65rem 1.35rem; font-size: 0.92rem; border-radius: 10px;">
+            ✕ បិទ (Close)
+          </button>
+          <button class="nav-btn btn-create" id="btn-scorecard-play-again" style="padding: 0.65rem 1.6rem; font-size: 0.95rem; border-radius: 10px; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);">
+            🔄 លេងម្តងទៀត
           </button>
         </div>
       </div>
@@ -63,6 +72,27 @@ export class ScorecardModal {
   }
 
   bindEvents() {
+    // Close button (X)
+    this.modalEl.querySelector('#btn-close-scorecard')?.addEventListener('click', () => {
+      sound.playPop();
+      this.close();
+    });
+
+    // Close button in footer
+    this.modalEl.querySelector('#btn-scorecard-close')?.addEventListener('click', () => {
+      sound.playPop();
+      this.close();
+    });
+
+    // Backdrop click
+    this.modalEl.addEventListener('click', (e) => {
+      if (e.target === this.modalEl) {
+        sound.playPop();
+        this.close();
+      }
+    });
+
+    // Play again button
     this.modalEl.querySelector('#btn-scorecard-play-again')?.addEventListener('click', () => {
       sound.playPop();
       this.close();
@@ -78,6 +108,21 @@ export class ScorecardModal {
     const accEl = this.modalEl.querySelector('#scorecard-accuracy');
     const timeEl = this.modalEl.querySelector('#scorecard-time');
     const streakEl = this.modalEl.querySelector('#scorecard-streak');
+
+    const lblScore = this.modalEl.querySelector('#scorecard-lbl-score');
+    const lblAcc = this.modalEl.querySelector('#scorecard-lbl-accuracy');
+    const lblTime = this.modalEl.querySelector('#scorecard-lbl-time');
+    const lblStreak = this.modalEl.querySelector('#scorecard-lbl-streak');
+    const btnPlayAgain = this.modalEl.querySelector('#btn-scorecard-play-again');
+    const btnClose = this.modalEl.querySelector('#btn-scorecard-close');
+
+    // Dynamic translations
+    if (lblScore) lblScore.textContent = i18n.t('finalScore');
+    if (lblAcc) lblAcc.textContent = i18n.t('accuracyRate');
+    if (lblTime) lblTime.textContent = i18n.t('timeSpent');
+    if (lblStreak) lblStreak.textContent = i18n.t('bestStreak');
+    if (btnPlayAgain) btnPlayAgain.textContent = i18n.t('playAgain');
+    if (btnClose) btnClose.textContent = i18n.t('btnClose');
 
     if (iconEl) iconEl.textContent = isWon ? '🏆' : '💀';
     if (titleEl) titleEl.textContent = isWon ? i18n.t('victoryTitle') : i18n.t('gameOverTitle');

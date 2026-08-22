@@ -159,23 +159,13 @@ export class WhackCreatorModal {
       timerInput.value = activity.timerSec || 60;
 
       const items = activity.items || [];
-      if (items.length > 0) {
-        items.forEach(item => this.addQuestionRow(item));
-      } else {
-        this.addQuestionRow();
-      }
+      items.forEach(item => this.addQuestionRow(item));
     } else {
       titleInput.value = '';
       speedSelect.value = '1300';
       livesSelect.value = 3;
       timerInput.value = 60;
-
-      // Start with 1 clean sample row or empty
-      this.addQuestionRow({
-        prompt: 'តើពាក្យណាជាឈ្មោះសត្វស្លាប (Birds)?',
-        target: 'ក្ងោក, សេក, ចាប, មាន់, ទា',
-        distractors: ['ខ្លា', 'ដំរី', 'ក្រពើ', 'ត្រី', 'ពស់']
-      });
+      // Start completely empty (0 questions) - user will click "Add Question"
     }
 
     this.updateCountBadge();

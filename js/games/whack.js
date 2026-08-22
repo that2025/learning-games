@@ -63,6 +63,29 @@ export class WhackGame {
     const arena = document.createElement('div');
     arena.className = 'whack-arena-container';
 
+    if (this.questions.length === 0) {
+      arena.innerHTML = `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 2px dashed rgba(236, 72, 153, 0.5); border-radius: 18px; padding: 2.5rem 1.5rem; text-align: center; max-width: 620px; margin: 2rem auto; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+          <div style="font-size: 3.5rem; animation: bounce 2s infinite;">🐹 🔨</div>
+          <div style="font-size: 1.4rem; font-weight: 800; color: #f472b6; margin-top: 0.85rem;">
+            ល្បែងវាយសត្វកណ្តុរ (Whack-a-Mole)
+          </div>
+          <div style="font-size: 0.92rem; color: #cbd5e1; margin-top: 0.6rem; line-height: 1.6;">
+            ល្បែងនេះគឺដាច់ដោយឡែកពីគេ! សូមចុចប៊ូតុងខាងក្រោម ដើម្បីបង្កើតសំណួរ ចម្លើយត្រូវ (Targets) និងចម្លើយខុសបញ្ឆោត (Traps) ដោយខ្លួនឯង។
+          </div>
+          <button class="nav-btn btn-create" id="btn-whack-first-create" style="margin-top: 1.5rem; font-size: 1.05rem; font-weight: 800; padding: 0.85rem 2.5rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4); border-radius: 14px; cursor: pointer;">
+            ➕ បង្កើតសំណួរវាយកណ្តុរឥឡូវនេះ
+          </button>
+        </div>
+      `;
+      this.container.appendChild(arena);
+      arena.querySelector('#btn-whack-first-create')?.addEventListener('click', () => {
+        sound.playPop();
+        document.dispatchEvent(new CustomEvent('open-whack-creator', { detail: this.activity }));
+      });
+      return;
+    }
+
     // Target Prompt Header
     const currentQ = this.questions[this.currentQuestionIdx % Math.max(1, this.questions.length)];
     const promptText = currentQ ? currentQ.prompt : 'សូមរៀបចំសំណួរវាយកណ្តុរ';
@@ -126,12 +149,21 @@ export class WhackGame {
 
     this.mouseMoveHandler = (e) => {
       if (this.hammerEl) {
-        this.hammerEl.style.left = `${e.clientX}px`;
-        this.hammerEl.style.top = `${e.clientY}px`;
+        const isOverModal = e.target && e.target.closest && e.target.closest('.modal-overlay.active, .modal-window');
+        if (isOverModal) {
+          this.hammerEl.style.display = 'none';
+        } else {
+          this.hammerEl.style.display = 'block';
+          this.hammerEl.style.left = `${e.clientX}px`;
+          this.hammerEl.style.top = `${e.clientY}px`;
+        }
       }
     };
 
-    this.clickHandler = () => {
+    this.clickHandler = (e) => {
+      const isOverModal = e.target && e.target.closest && e.target.closest('.modal-overlay.active, .modal-window');
+      if (isOverModal) return;
+
       if (this.hammerEl) {
         this.hammerEl.classList.add('whacking');
         setTimeout(() => {

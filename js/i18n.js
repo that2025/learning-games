@@ -52,6 +52,17 @@ export const translations = {
     livesRemaining: "ជីវិត:",
     reshuffle: "ច្របល់កាតឡើងវិញ",
     streakMultiplier: "គុណពិន្ទុ",
+    
+    // Scorecard & Victory
+    victoryTitle: "🎉 អបអរសាទរ! អ្នកបានឈ្នះហើយ!",
+    gameOverTitle: "💀 អស់ជីវិតហើយ! ព្យាយាមម្តងទៀត!",
+    finalScore: "ពិន្ទុសរុប",
+    accuracyRate: "ភាពត្រឹមត្រូវ",
+    timeSpent: "រយៈពេលលេង",
+    bestStreak: "ពិន្ទុបន្តបន្ទាប់ខ្ពស់បំផុត",
+    playAgain: "🔄 លេងម្តងទៀត",
+    btnClose: "✕ បិទ",
+    
     // Wheel & Student Picker
     wheelStudentPickerTitle: "កង់វិលចាប់ឈ្មោះសិស្ស (Student Name Picker)",
     rosterTitle: "បញ្ជីឈ្មោះសិស្សក្នុងថ្នាក់",
@@ -202,6 +213,17 @@ export const translations = {
     livesRemaining: "Lives:",
     reshuffle: "Reshuffle Cards",
     streakMultiplier: "Streak Multiplier",
+    
+    // Scorecard & Victory
+    victoryTitle: "🎉 Congratulations! Victory!",
+    gameOverTitle: "💀 Game Over! Try Again!",
+    finalScore: "Final Score",
+    accuracyRate: "Accuracy Rate",
+    timeSpent: "Time Spent",
+    bestStreak: "Best Streak",
+    playAgain: "🔄 Play Again",
+    btnClose: "✕ Close",
+    
     // Wheel & Student Picker
     wheelStudentPickerTitle: "Classroom Student Name Picker & Team Maker",
     rosterTitle: "Classroom Student Roster",

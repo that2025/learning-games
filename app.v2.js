@@ -363,6 +363,17 @@ const translations = {
     livesRemaining: "ជីវិត:",
     reshuffle: "ច្របល់កាតឡើងវិញ",
     streakMultiplier: "គុណពិន្ទុ",
+    
+    // Scorecard & Victory
+    victoryTitle: "🎉 អបអរសាទរ! អ្នកបានឈ្នះហើយ!",
+    gameOverTitle: "💀 អស់ជីវិតហើយ! ព្យាយាមម្តងទៀត!",
+    finalScore: "ពិន្ទុសរុប",
+    accuracyRate: "ភាពត្រឹមត្រូវ",
+    timeSpent: "រយៈពេលលេង",
+    bestStreak: "ពិន្ទុបន្តបន្ទាប់ខ្ពស់បំផុត",
+    playAgain: "🔄 លេងម្តងទៀត",
+    btnClose: "✕ បិទ",
+    
     // Wheel & Student Picker
     wheelStudentPickerTitle: "កង់វិលចាប់ឈ្មោះសិស្ស (Student Name Picker)",
     rosterTitle: "បញ្ជីឈ្មោះសិស្សក្នុងថ្នាក់",
@@ -513,6 +524,17 @@ const translations = {
     livesRemaining: "Lives:",
     reshuffle: "Reshuffle Cards",
     streakMultiplier: "Streak Multiplier",
+    
+    // Scorecard & Victory
+    victoryTitle: "🎉 Congratulations! Victory!",
+    gameOverTitle: "💀 Game Over! Try Again!",
+    finalScore: "Final Score",
+    accuracyRate: "Accuracy Rate",
+    timeSpent: "Time Spent",
+    bestStreak: "Best Streak",
+    playAgain: "🔄 Play Again",
+    btnClose: "✕ Close",
+    
     // Wheel & Student Picker
     wheelStudentPickerTitle: "Classroom Student Name Picker & Team Maker",
     rosterTitle: "Classroom Student Roster",
@@ -4333,6 +4355,29 @@ class WhackGame {
     const arena = document.createElement('div');
     arena.className = 'whack-arena-container';
 
+    if (this.questions.length === 0) {
+      arena.innerHTML = `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 2px dashed rgba(236, 72, 153, 0.5); border-radius: 18px; padding: 2.5rem 1.5rem; text-align: center; max-width: 620px; margin: 2rem auto; box-shadow: 0 8px 30px rgba(0,0,0,0.4);">
+          <div style="font-size: 3.5rem; animation: bounce 2s infinite;">🐹 🔨</div>
+          <div style="font-size: 1.4rem; font-weight: 800; color: #f472b6; margin-top: 0.85rem;">
+            ល្បែងវាយសត្វកណ្តុរ (Whack-a-Mole)
+          </div>
+          <div style="font-size: 0.92rem; color: #cbd5e1; margin-top: 0.6rem; line-height: 1.6;">
+            ល្បែងនេះគឺដាច់ដោយឡែកពីគេ! សូមចុចប៊ូតុងខាងក្រោម ដើម្បីបង្កើតសំណួរ ចម្លើយត្រូវ (Targets) និងចម្លើយខុសបញ្ឆោត (Traps) ដោយខ្លួនឯង។
+          </div>
+          <button class="nav-btn btn-create" id="btn-whack-first-create" style="margin-top: 1.5rem; font-size: 1.05rem; font-weight: 800; padding: 0.85rem 2.5rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4); border-radius: 14px; cursor: pointer;">
+            ➕ បង្កើតសំណួរវាយកណ្តុរឥឡូវនេះ
+          </button>
+        </div>
+      `;
+      this.container.appendChild(arena);
+      arena.querySelector('#btn-whack-first-create')?.addEventListener('click', () => {
+        sound.playPop();
+        document.dispatchEvent(new CustomEvent('open-whack-creator', { detail: this.activity }));
+      });
+      return;
+    }
+
     // Target Prompt Header
     const currentQ = this.questions[this.currentQuestionIdx % Math.max(1, this.questions.length)];
     const promptText = currentQ ? currentQ.prompt : 'សូមរៀបចំសំណួរវាយកណ្តុរ';
@@ -4396,12 +4441,21 @@ class WhackGame {
 
     this.mouseMoveHandler = (e) => {
       if (this.hammerEl) {
-        this.hammerEl.style.left = `${e.clientX}px`;
-        this.hammerEl.style.top = `${e.clientY}px`;
+        const isOverModal = e.target && e.target.closest && e.target.closest('.modal-overlay.active, .modal-window');
+        if (isOverModal) {
+          this.hammerEl.style.display = 'none';
+        } else {
+          this.hammerEl.style.display = 'block';
+          this.hammerEl.style.left = `${e.clientX}px`;
+          this.hammerEl.style.top = `${e.clientY}px`;
+        }
       }
     };
 
-    this.clickHandler = () => {
+    this.clickHandler = (e) => {
+      const isOverModal = e.target && e.target.closest && e.target.closest('.modal-overlay.active, .modal-window');
+      if (isOverModal) return;
+
       if (this.hammerEl) {
         this.hammerEl.classList.add('whacking');
         setTimeout(() => {
@@ -4630,39 +4684,48 @@ class ScorecardModal {
     this.modalEl = document.createElement('div');
     this.modalEl.className = 'modal-overlay';
     this.modalEl.id = 'modal-scorecard';
+    this.modalEl.style.zIndex = '1100';
 
     this.modalEl.innerHTML = `
-      <div class="modal-window" style="max-width: 500px; text-align: center;">
-        <div class="modal-body" style="padding: 2.25rem 1.75rem; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;">
-          <div id="scorecard-icon" style="font-size: 3.8rem; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));">🏆</div>
-          <div id="scorecard-title" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">
-            ${i18n.t('victoryTitle')}
+      <div class="modal-window" style="max-width: 480px; text-align: center; position: relative; border: 1px solid var(--panel-border); box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+        <!-- Top Right Close Button (X) -->
+        <button class="modal-close-btn" id="btn-close-scorecard" title="បិទ (Close)" style="position: absolute; top: 12px; right: 14px; z-index: 10; font-size: 1.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; color: var(--text-main); cursor: pointer; transition: all 0.2s ease;">
+          &times;
+        </button>
+
+        <div class="modal-body" style="padding: 2.25rem 1.75rem 1.25rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+          <div id="scorecard-icon" style="font-size: 4rem; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4)); animation: bounce 1.5s infinite;">🏆</div>
+          <div id="scorecard-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); line-height: 1.4;">
+            🎉 អបអរសាទរ! អ្នកបានឈ្នះហើយ!
           </div>
 
           <!-- Stats Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; margin: 0.5rem 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; margin: 0.35rem 0;">
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('finalScore')}</div>
-              <div id="scorecard-score" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-secondary);">0</div>
+              <div id="scorecard-lbl-score" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ពិន្ទុសរុប</div>
+              <div id="scorecard-score" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-secondary); margin-top: 0.15rem;">0</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('accuracyRate')}</div>
-              <div id="scorecard-accuracy" style="font-size: 1.5rem; font-weight: 800; color: var(--accent-primary);">100%</div>
+              <div id="scorecard-lbl-accuracy" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ភាពត្រឹមត្រូវ</div>
+              <div id="scorecard-accuracy" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-primary); margin-top: 0.15rem;">100%</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('timeSpent')}</div>
-              <div id="scorecard-time" style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">00:00</div>
+              <div id="scorecard-lbl-time" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">រយៈពេលលេង</div>
+              <div id="scorecard-time" style="font-size: 1.35rem; font-weight: 700; color: var(--text-main); margin-top: 0.15rem;">00:00</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.85rem;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">${i18n.t('bestStreak')}</div>
-              <div id="scorecard-streak" style="font-size: 1.25rem; font-weight: 700; color: #f43f5e;">🔥 0</div>
+              <div id="scorecard-lbl-streak" style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ពិន្ទុបន្តបន្ទាប់</div>
+              <div id="scorecard-streak" style="font-size: 1.35rem; font-weight: 700; color: #f43f5e; margin-top: 0.15rem;">🔥 0</div>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer" style="justify-content: center; gap: 1rem;">
-          <button class="nav-btn btn-create" id="btn-scorecard-play-again" style="padding: 0.6rem 1.5rem; font-size: 0.95rem;">
-            ${i18n.t('playAgain')}
+        <div class="modal-footer" style="justify-content: center; gap: 0.85rem; padding-bottom: 1.5rem; flex-wrap: wrap;">
+          <button class="nav-btn btn-secondary" id="btn-scorecard-close" style="padding: 0.65rem 1.35rem; font-size: 0.92rem; border-radius: 10px;">
+            ✕ បិទ (Close)
+          </button>
+          <button class="nav-btn btn-create" id="btn-scorecard-play-again" style="padding: 0.65rem 1.6rem; font-size: 0.95rem; border-radius: 10px; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);">
+            🔄 លេងម្តងទៀត
           </button>
         </div>
       </div>
@@ -4673,6 +4736,27 @@ class ScorecardModal {
   }
 
   bindEvents() {
+    // Close button (X)
+    this.modalEl.querySelector('#btn-close-scorecard')?.addEventListener('click', () => {
+      sound.playPop();
+      this.close();
+    });
+
+    // Close button in footer
+    this.modalEl.querySelector('#btn-scorecard-close')?.addEventListener('click', () => {
+      sound.playPop();
+      this.close();
+    });
+
+    // Backdrop click
+    this.modalEl.addEventListener('click', (e) => {
+      if (e.target === this.modalEl) {
+        sound.playPop();
+        this.close();
+      }
+    });
+
+    // Play again button
     this.modalEl.querySelector('#btn-scorecard-play-again')?.addEventListener('click', () => {
       sound.playPop();
       this.close();
@@ -4688,6 +4772,21 @@ class ScorecardModal {
     const accEl = this.modalEl.querySelector('#scorecard-accuracy');
     const timeEl = this.modalEl.querySelector('#scorecard-time');
     const streakEl = this.modalEl.querySelector('#scorecard-streak');
+
+    const lblScore = this.modalEl.querySelector('#scorecard-lbl-score');
+    const lblAcc = this.modalEl.querySelector('#scorecard-lbl-accuracy');
+    const lblTime = this.modalEl.querySelector('#scorecard-lbl-time');
+    const lblStreak = this.modalEl.querySelector('#scorecard-lbl-streak');
+    const btnPlayAgain = this.modalEl.querySelector('#btn-scorecard-play-again');
+    const btnClose = this.modalEl.querySelector('#btn-scorecard-close');
+
+    // Dynamic translations
+    if (lblScore) lblScore.textContent = i18n.t('finalScore');
+    if (lblAcc) lblAcc.textContent = i18n.t('accuracyRate');
+    if (lblTime) lblTime.textContent = i18n.t('timeSpent');
+    if (lblStreak) lblStreak.textContent = i18n.t('bestStreak');
+    if (btnPlayAgain) btnPlayAgain.textContent = i18n.t('playAgain');
+    if (btnClose) btnClose.textContent = i18n.t('btnClose');
 
     if (iconEl) iconEl.textContent = isWon ? '🏆' : '💀';
     if (titleEl) titleEl.textContent = isWon ? i18n.t('victoryTitle') : i18n.t('gameOverTitle');
@@ -6044,23 +6143,13 @@ class WhackCreatorModal {
       timerInput.value = activity.timerSec || 60;
 
       const items = activity.items || [];
-      if (items.length > 0) {
-        items.forEach(item => this.addQuestionRow(item));
-      } else {
-        this.addQuestionRow();
-      }
+      items.forEach(item => this.addQuestionRow(item));
     } else {
       titleInput.value = '';
       speedSelect.value = '1300';
       livesSelect.value = 3;
       timerInput.value = 60;
-
-      // Start with 1 clean sample row or empty
-      this.addQuestionRow({
-        prompt: 'តើពាក្យណាជាឈ្មោះសត្វស្លាប (Birds)?',
-        target: 'ក្ងោក, សេក, ចាប, មាន់, ទា',
-        distractors: ['ខ្លា', 'ដំរី', 'ក្រពើ', 'ត្រី', 'ពស់']
-      });
+      // Start completely empty (0 questions) - user will click "Add Question"
     }
 
     this.updateCountBadge();
@@ -7256,6 +7345,7 @@ class CreatorStudioModal {
 class AppController {
   constructor() {
     this.currentActivity = null;
+    this.whackActivity = this.loadWhackActivity();
     this.currentTemplate = 'pairs';
     this.currentTheme = localStorage.getItem('otpg_theme') || 'jungle';
     this.activeGameInstance = null;
@@ -7266,6 +7356,26 @@ class AppController {
     this.managerModal = null;
     this.aiModal = null;
     this.scorecardModal = null;
+  }
+
+  loadWhackActivity() {
+    try {
+      const saved = localStorage.getItem('otpg_whack_custom_activity');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {
+      id: 'whack_isolated_activity',
+      title: { km: 'ល្បែងវាយសត្វកណ្តុរ', en: 'Whack-a-Mole' },
+      description: { km: 'ល្បែងវាយកណ្តុរអន្តរកម្ម', en: 'Interactive Whack-a-Mole' },
+      category: { km: 'វាយកណ្តុរ', en: 'Whack-a-Mole' },
+      defaultTemplate: 'whack',
+      moleSpeed: 1300,
+      lives: 3,
+      timerSec: 60,
+      items: [] // 0 questions by default
+    };
   }
 
   init() {
@@ -7302,9 +7412,11 @@ class AppController {
     });
 
     this.whackCreatorModal = new WhackCreatorModal((savedAct) => {
-      this.currentActivity = savedAct;
+      this.whackActivity = savedAct;
+      try {
+        localStorage.setItem('otpg_whack_custom_activity', JSON.stringify(savedAct));
+      } catch (e) {}
       this.currentTemplate = 'whack';
-      this.populateActivityDropdown();
       this.loadGame('whack');
     });
 
@@ -7317,7 +7429,7 @@ class AppController {
       },
       (editAct) => {
         if (editAct.defaultTemplate === 'whack') {
-          this.whackCreatorModal.open(editAct);
+          this.whackCreatorModal.open(this.whackActivity);
         } else {
           this.creatorModal.open(editAct);
         }
@@ -7333,7 +7445,7 @@ class AppController {
       },
       (aiAct) => {
         if (this.currentTemplate === 'whack') {
-          this.whackCreatorModal.open(aiAct);
+          this.whackCreatorModal.open(this.whackActivity);
         } else {
           this.creatorModal.open(aiAct);
         }
@@ -7346,8 +7458,8 @@ class AppController {
     );
 
     // Custom Event from Whack game
-    document.addEventListener('open-whack-creator', (e) => {
-      this.whackCreatorModal.open(e.detail || this.currentActivity);
+    document.addEventListener('open-whack-creator', () => {
+      this.whackCreatorModal.open(this.whackActivity);
     });
   }
 
@@ -7423,8 +7535,8 @@ class AppController {
     // Top CTA: Edit
     document.getElementById('btn-nav-edit-act')?.addEventListener('click', () => {
       sound.playPop();
-      if (this.currentTemplate === 'whack' || this.currentActivity?.defaultTemplate === 'whack') {
-        this.whackCreatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(this.whackActivity);
       } else {
         this.creatorModal.open(this.currentActivity);
       }
@@ -7471,7 +7583,11 @@ class AppController {
 
     document.getElementById('tb-btn-edit')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(this.whackActivity);
+      } else {
+        this.creatorModal.open(this.currentActivity);
+      }
     });
 
     document.getElementById('tb-btn-duplicate')?.addEventListener('click', () => {
@@ -7581,6 +7697,26 @@ class AppController {
       return;
     }
 
+    if (this.currentTemplate === 'whack') {
+      const isKm = i18n.getLang() === 'km';
+      const whackTitle = typeof this.whackActivity.title === 'object' 
+        ? (this.whackActivity.title[i18n.getLang()] || this.whackActivity.title.km) 
+        : this.whackActivity.title;
+      const whackDesc = typeof this.whackActivity.description === 'object'
+        ? (this.whackActivity.description[i18n.getLang()] || this.whackActivity.description.km)
+        : this.whackActivity.description;
+
+      if (titleEl) titleEl.textContent = `🐹 ${whackTitle || 'ល្បែងវាយសត្វកណ្តុរ (Whack-a-Mole)'}`;
+      if (descEl) descEl.textContent = whackDesc || (isKm ? 'វាយតែកណ្តុរដែលកាន់ចម្លើយត្រឹមត្រូវ (ហាមវាយកណ្តុរដែលកាន់ចម្លើយខុស)' : 'Hit only moles holding correct answers');
+      if (catBadge) catBadge.textContent = isKm ? '🐹 វាយកណ្តុរ (Whack-a-Mole)' : '🐹 Whack-a-Mole';
+      
+      const count = this.whackActivity.items ? this.whackActivity.items.length : 0;
+      if (countBadge) countBadge.textContent = `${count} សំណួរ`;
+      if (hudReshuffleBtn) hudReshuffleBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = 'none';
+      return;
+    }
+
     if (hudReshuffleBtn) hudReshuffleBtn.style.display = 'inline-flex';
 
     const title = typeof this.currentActivity.title === 'object' 
@@ -7659,8 +7795,9 @@ class AppController {
         break;
     }
 
-    // Mount engine
-    this.activeGameInstance.mount(arenaStage, this.currentActivity, (results) => {
+    // Mount engine with appropriate activity (isolated whackActivity for whack, currentActivity for others)
+    const targetActivity = (templateType === 'whack') ? this.whackActivity : this.currentActivity;
+    this.activeGameInstance.mount(arenaStage, targetActivity, (results) => {
       this.handleGameCompletion(results);
     });
 
@@ -7668,31 +7805,39 @@ class AppController {
   }
 
   restartCurrentGame(forceShuffle = false) {
-    if (forceShuffle && this.currentActivity) {
-      this.currentActivity.shuffle = true;
+    if (this.currentTemplate === 'whack') {
+      if (forceShuffle && this.whackActivity) {
+        this.whackActivity.shuffle = true;
+      }
+    } else {
+      if (forceShuffle && this.currentActivity) {
+        this.currentActivity.shuffle = true;
+      }
     }
     this.loadGame(this.currentTemplate);
   }
 
   exportCurrentActivityToFile() {
-    if (!this.currentActivity) return;
+    const actToExport = (this.currentTemplate === 'whack') ? this.whackActivity : this.currentActivity;
+    if (!actToExport) return;
 
-    const rawTitle = typeof this.currentActivity.title === 'object' 
-      ? (this.currentActivity.title.km || this.currentActivity.title.en || 'មេរៀន') 
-      : (this.currentActivity.title || 'មេរៀន');
+    const rawTitle = typeof actToExport.title === 'object' 
+      ? (actToExport.title.km || actToExport.title.en || 'មេរៀន') 
+      : (actToExport.title || 'មេរៀន');
 
     const cleanTitle = rawTitle.replace(/\s+/g, '_').replace(/[\\/:*?"<>|]/g, '');
 
     const exportData = {
-      id: this.currentActivity.id || `custom-${Date.now()}`,
-      title: this.currentActivity.title,
-      description: this.currentActivity.description || '',
-      category: this.currentActivity.category || 'ទូទៅ',
-      defaultTemplate: this.currentActivity.defaultTemplate || this.currentTemplate || 'pairs',
-      timerSec: this.currentActivity.timerSec || 60,
-      lives: this.currentActivity.lives || 3,
+      id: actToExport.id || `custom-${Date.now()}`,
+      title: actToExport.title,
+      description: actToExport.description || '',
+      category: actToExport.category || 'ទូទៅ',
+      defaultTemplate: actToExport.defaultTemplate || this.currentTemplate || 'pairs',
+      timerSec: actToExport.timerSec || 60,
+      lives: actToExport.lives || 3,
+      moleSpeed: actToExport.moleSpeed || 1300,
       shuffle: true,
-      items: this.currentActivity.items || []
+      items: actToExport.items || []
     };
 
     const jsonStr = JSON.stringify(exportData, null, 2);

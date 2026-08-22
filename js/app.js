@@ -28,6 +28,7 @@ import { ScorecardModal } from './components/leaderboard.js';
 class AppController {
   constructor() {
     this.currentActivity = null;
+    this.whackActivity = this.loadWhackActivity();
     this.currentTemplate = 'pairs';
     this.currentTheme = localStorage.getItem('otpg_theme') || 'jungle';
     this.activeGameInstance = null;
@@ -38,6 +39,26 @@ class AppController {
     this.managerModal = null;
     this.aiModal = null;
     this.scorecardModal = null;
+  }
+
+  loadWhackActivity() {
+    try {
+      const saved = localStorage.getItem('otpg_whack_custom_activity');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {
+      id: 'whack_isolated_activity',
+      title: { km: 'ល្បែងវាយសត្វកណ្តុរ', en: 'Whack-a-Mole' },
+      description: { km: 'ល្បែងវាយកណ្តុរអន្តរកម្ម', en: 'Interactive Whack-a-Mole' },
+      category: { km: 'វាយកណ្តុរ', en: 'Whack-a-Mole' },
+      defaultTemplate: 'whack',
+      moleSpeed: 1300,
+      lives: 3,
+      timerSec: 60,
+      items: [] // 0 questions by default
+    };
   }
 
   init() {
@@ -74,9 +95,11 @@ class AppController {
     });
 
     this.whackCreatorModal = new WhackCreatorModal((savedAct) => {
-      this.currentActivity = savedAct;
+      this.whackActivity = savedAct;
+      try {
+        localStorage.setItem('otpg_whack_custom_activity', JSON.stringify(savedAct));
+      } catch (e) {}
       this.currentTemplate = 'whack';
-      this.populateActivityDropdown();
       this.loadGame('whack');
     });
 
@@ -89,7 +112,7 @@ class AppController {
       },
       (editAct) => {
         if (editAct.defaultTemplate === 'whack') {
-          this.whackCreatorModal.open(editAct);
+          this.whackCreatorModal.open(this.whackActivity);
         } else {
           this.creatorModal.open(editAct);
         }
@@ -105,7 +128,7 @@ class AppController {
       },
       (aiAct) => {
         if (this.currentTemplate === 'whack') {
-          this.whackCreatorModal.open(aiAct);
+          this.whackCreatorModal.open(this.whackActivity);
         } else {
           this.creatorModal.open(aiAct);
         }
@@ -118,8 +141,8 @@ class AppController {
     );
 
     // Custom Event from Whack game
-    document.addEventListener('open-whack-creator', (e) => {
-      this.whackCreatorModal.open(e.detail || this.currentActivity);
+    document.addEventListener('open-whack-creator', () => {
+      this.whackCreatorModal.open(this.whackActivity);
     });
   }
 
@@ -195,8 +218,8 @@ class AppController {
     // Top CTA: Edit
     document.getElementById('btn-nav-edit-act')?.addEventListener('click', () => {
       sound.playPop();
-      if (this.currentTemplate === 'whack' || this.currentActivity?.defaultTemplate === 'whack') {
-        this.whackCreatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(this.whackActivity);
       } else {
         this.creatorModal.open(this.currentActivity);
       }
@@ -243,7 +266,11 @@ class AppController {
 
     document.getElementById('tb-btn-edit')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(this.whackActivity);
+      } else {
+        this.creatorModal.open(this.currentActivity);
+      }
     });
 
     document.getElementById('tb-btn-duplicate')?.addEventListener('click', () => {
@@ -353,6 +380,26 @@ class AppController {
       return;
     }
 
+    if (this.currentTemplate === 'whack') {
+      const isKm = i18n.getLang() === 'km';
+      const whackTitle = typeof this.whackActivity.title === 'object' 
+        ? (this.whackActivity.title[i18n.getLang()] || this.whackActivity.title.km) 
+        : this.whackActivity.title;
+      const whackDesc = typeof this.whackActivity.description === 'object'
+        ? (this.whackActivity.description[i18n.getLang()] || this.whackActivity.description.km)
+        : this.whackActivity.description;
+
+      if (titleEl) titleEl.textContent = `🐹 ${whackTitle || 'ល្បែងវាយសត្វកណ្តុរ (Whack-a-Mole)'}`;
+      if (descEl) descEl.textContent = whackDesc || (isKm ? 'វាយតែកណ្តុរដែលកាន់ចម្លើយត្រឹមត្រូវ (ហាមវាយកណ្តុរដែលកាន់ចម្លើយខុស)' : 'Hit only moles holding correct answers');
+      if (catBadge) catBadge.textContent = isKm ? '🐹 វាយកណ្តុរ (Whack-a-Mole)' : '🐹 Whack-a-Mole';
+      
+      const count = this.whackActivity.items ? this.whackActivity.items.length : 0;
+      if (countBadge) countBadge.textContent = `${count} សំណួរ`;
+      if (hudReshuffleBtn) hudReshuffleBtn.style.display = 'none';
+      if (deleteBtn) deleteBtn.style.display = 'none';
+      return;
+    }
+
     if (hudReshuffleBtn) hudReshuffleBtn.style.display = 'inline-flex';
 
     const title = typeof this.currentActivity.title === 'object' 
@@ -431,8 +478,9 @@ class AppController {
         break;
     }
 
-    // Mount engine
-    this.activeGameInstance.mount(arenaStage, this.currentActivity, (results) => {
+    // Mount engine with appropriate activity (isolated whackActivity for whack, currentActivity for others)
+    const targetActivity = (templateType === 'whack') ? this.whackActivity : this.currentActivity;
+    this.activeGameInstance.mount(arenaStage, targetActivity, (results) => {
       this.handleGameCompletion(results);
     });
 
@@ -440,31 +488,39 @@ class AppController {
   }
 
   restartCurrentGame(forceShuffle = false) {
-    if (forceShuffle && this.currentActivity) {
-      this.currentActivity.shuffle = true;
+    if (this.currentTemplate === 'whack') {
+      if (forceShuffle && this.whackActivity) {
+        this.whackActivity.shuffle = true;
+      }
+    } else {
+      if (forceShuffle && this.currentActivity) {
+        this.currentActivity.shuffle = true;
+      }
     }
     this.loadGame(this.currentTemplate);
   }
 
   exportCurrentActivityToFile() {
-    if (!this.currentActivity) return;
+    const actToExport = (this.currentTemplate === 'whack') ? this.whackActivity : this.currentActivity;
+    if (!actToExport) return;
 
-    const rawTitle = typeof this.currentActivity.title === 'object' 
-      ? (this.currentActivity.title.km || this.currentActivity.title.en || 'មេរៀន') 
-      : (this.currentActivity.title || 'មេរៀន');
+    const rawTitle = typeof actToExport.title === 'object' 
+      ? (actToExport.title.km || actToExport.title.en || 'មេរៀន') 
+      : (actToExport.title || 'មេរៀន');
 
     const cleanTitle = rawTitle.replace(/\s+/g, '_').replace(/[\\/:*?"<>|]/g, '');
 
     const exportData = {
-      id: this.currentActivity.id || `custom-${Date.now()}`,
-      title: this.currentActivity.title,
-      description: this.currentActivity.description || '',
-      category: this.currentActivity.category || 'ទូទៅ',
-      defaultTemplate: this.currentActivity.defaultTemplate || this.currentTemplate || 'pairs',
-      timerSec: this.currentActivity.timerSec || 60,
-      lives: this.currentActivity.lives || 3,
+      id: actToExport.id || `custom-${Date.now()}`,
+      title: actToExport.title,
+      description: actToExport.description || '',
+      category: actToExport.category || 'ទូទៅ',
+      defaultTemplate: actToExport.defaultTemplate || this.currentTemplate || 'pairs',
+      timerSec: actToExport.timerSec || 60,
+      lives: actToExport.lives || 3,
+      moleSpeed: actToExport.moleSpeed || 1300,
       shuffle: true,
-      items: this.currentActivity.items || []
+      items: actToExport.items || []
     };
 
     const jsonStr = JSON.stringify(exportData, null, 2);
