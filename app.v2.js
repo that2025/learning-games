@@ -4914,6 +4914,8 @@ class AiGeneratorModal {
     this.generatedQuestions = [];
     this.uploadedImageBase64 = null;
     this.uploadedPdfText = '';
+    this.uploadedPdfBase64 = null;
+    this.uploadedPdfImages = [];
     this.onApplyCallback = onApplyCallback;
     this.onEditCallback = onEditCallback;
     this.activeModel = 'gemini-2.0-flash';
@@ -5303,34 +5305,100 @@ class AiGeneratorModal {
     const statusEl = document.getElementById('ai-pdf-status-card');
     if (!file) return;
 
-    if (statusEl) statusEl.innerHTML = `⏳ <strong>${file.name}</strong> - កំពុងអានឯកសារ PDF...`;
+    if (statusEl) {
+      statusEl.innerHTML = `
+        <div style="background: rgba(59,130,246,0.15); border: 1px solid #3b82f6; border-radius: 10px; padding: 0.75rem; color: #93c5fd;">
+          ⏳ <strong>${file.name}</strong> - កំពុងផ្ទុក និងដំណើរការទំព័រ PDF សម្រាប់ Gemini AI Vision...
+        </div>
+      `;
+    }
 
     try {
-      if (typeof window.pdfjsLib === 'undefined') {
-        throw new Error("PDF.js library not loaded yet.");
-      }
-
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      // Convert ArrayBuffer to Base64
+      let binary = '';
+      const bytes = new Uint8Array(arrayBuffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      this.uploadedPdfBase64 = btoa(binary);
 
       let fullText = '';
-      const numPages = Math.min(pdf.numPages, 5);
+      this.uploadedPdfImages = [];
 
-      for (let i = 1; i <= numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
+      // Render PDF pages to high-res images for Gemini Vision
+      if (typeof window.pdfjsLib !== 'undefined') {
+        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const numPages = Math.min(pdf.numPages, 5); // Up to 5 pages
+
+        for (let i = 1; i <= numPages; i++) {
+          try {
+            const page = await pdf.getPage(i);
+
+            // Extract text
+            try {
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map(item => item.str).join(' ');
+              if (pageText.trim()) {
+                fullText += `--- [ទំព័រទី ${i}] ---\n` + pageText + '\n';
+              }
+            } catch (tErr) {}
+
+            // Render page to canvas -> Base64 JPEG for Gemini Vision
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imgBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            this.uploadedPdfImages.push(imgBase64);
+          } catch (pErr) {
+            console.warn(`Error processing PDF page ${i}:`, pErr);
+          }
+        }
       }
 
-      this.uploadedPdfText = fullText;
+      this.uploadedPdfText = fullText.trim();
+
+      // Render visual thumbnail previews
+      let previewHtml = '';
+      if (this.uploadedPdfImages.length > 0) {
+        previewHtml = `
+          <div style="display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.6rem 0; margin-top: 0.5rem;">
+            ${this.uploadedPdfImages.map((img, idx) => `
+              <div style="text-align: center; flex-shrink: 0;">
+                <img src="${img}" style="height: 120px; border-radius: 8px; border: 1px solid var(--panel-border); box-shadow: 0 4px 10px rgba(0,0,0,0.4);" alt="Page ${idx + 1}" />
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; font-weight: 600;">ទំព័រទី ${idx + 1}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
       if (statusEl) {
-        statusEl.innerHTML = `✅ <strong>${file.name}</strong> (${numPages} ទំព័រ) - បានទាញយកអត្ថបទ ${fullText.length} តួអក្សរដោយជោគជ័យ!`;
+        statusEl.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; border-radius: 10px; padding: 0.75rem; color: var(--text-main);">
+            <div style="font-weight: 700; color: #34d399; display: flex; align-items: center; gap: 0.4rem;">
+              <span>✅</span> <span>បានអានឯកសារ: <strong>${file.name}</strong> (${this.uploadedPdfImages.length || 1} ទំព័រ)</span>
+            </div>
+            <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 0.25rem;">
+              ✨ Google Gemini AI នឹងវិភាគផ្ទាល់លើទំព័រ PDF (ទាំងអត្ថបទ និងរូបភាព OCR) ដើម្បីបង្កើតសំណួរត្រូវតាមមេរៀន ១០០%។
+            </div>
+            ${previewHtml}
+          </div>
+        `;
       }
       sound.playMatch();
     } catch (err) {
-      console.error(err);
-      if (statusEl) statusEl.innerHTML = `❌ កំហុសក្នុងការអាន PDF: ${err.message}`;
+      console.error("PDF Read Error:", err);
+      if (statusEl) {
+        statusEl.innerHTML = `<div style="color: #f87171; font-weight: 700; background: rgba(239,68,68,0.15); border: 1px solid #ef4444; border-radius: 10px; padding: 0.75rem;">❌ កំហុសក្នុងការអាន PDF: ${err.message}</div>`;
+      }
+      sound.playWrong();
     }
   }
 
@@ -5344,7 +5412,7 @@ class AiGeneratorModal {
       this.uploadedImageBase64 = event.target.result;
       if (previewWrap) {
         previewWrap.innerHTML = `
-          <img src="${this.uploadedImageBase64}" style="max-height: 180px; max-width: 100%; border-radius: 10px; border: 1px solid var(--panel-border);" alt="preview" />
+          <img src="${this.uploadedImageBase64}" style="max-height: 180px; max-width: 100%; border-radius: 10px; border: 1px solid var(--panel-border); box-shadow: 0 4px 10px rgba(0,0,0,0.4);" alt="preview" />
         `;
       }
       sound.playPop();
@@ -5393,16 +5461,25 @@ class AiGeneratorModal {
     let userPrompt = '';
     if (this.currentTab === 'prompt') {
       userPrompt = document.getElementById('ai-prompt-input')?.value.trim();
+      if (!userPrompt) {
+        alert("សូមបញ្ចូលប្រធានបទមេរៀន (ឧ. គណិតវិទ្យា វិធីបូក, វិទ្យាសាស្ត្រ...)");
+        document.getElementById('ai-prompt-input')?.focus();
+        return;
+      }
     } else if (this.currentTab === 'pdf') {
-      userPrompt = this.uploadedPdfText;
+      if (!this.uploadedPdfBase64 && !this.uploadedPdfText && (!this.uploadedPdfImages || this.uploadedPdfImages.length === 0)) {
+        alert("សូមជ្រើសរើសឯកសារ PDF សៀវភៅពុម្ពជាមុនសិន!");
+        document.getElementById('ai-pdf-file')?.click();
+        return;
+      }
+      userPrompt = 'ឯកសារ PDF សៀវភៅពុម្ព';
     } else if (this.currentTab === 'image') {
+      if (!this.uploadedImageBase64) {
+        alert("សូមជ្រើសរើសរូបភាពទំព័រមេរៀនជាមុនសិន!");
+        document.getElementById('ai-img-file')?.click();
+        return;
+      }
       userPrompt = 'រូបភាពសៀវភៅពុម្ព';
-    }
-
-    if (!userPrompt) {
-      alert("សូមបញ្ចូលប្រធានបទមេរៀន (ឧ. គណិតវិទ្យា វិធីបូក, វិទ្យាសាស្ត្រ...)");
-      document.getElementById('ai-prompt-input')?.focus();
-      return;
     }
 
     // UI: Start Thinking Visualizer
@@ -5412,7 +5489,13 @@ class AiGeneratorModal {
     if (thinkingBox) thinkingBox.style.display = 'block';
 
     // Step 1: Connecting
-    if (thinkingStatus) thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនប្រធានបទ <strong>"${userPrompt}"</strong> ទៅកាន់ Google Gemini Cloud...`;
+    if (thinkingStatus) {
+      if (this.currentTab === 'pdf') {
+        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនទំព័រ PDF ទៅកាន់ Google Gemini AI (Vision & OCR Analysis)...`;
+      } else {
+        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនប្រធានបទ <strong>"${userPrompt}"</strong> ទៅកាន់ Google Gemini Cloud...`;
+      }
+    }
     if (progressBar) progressBar.style.width = '35%';
     sound.playPop();
 
@@ -5420,7 +5503,13 @@ class AiGeneratorModal {
 
     // 1. Call Google Gemini Cloud API directly
     try {
-      if (thinkingStatus) thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
+      if (thinkingStatus) {
+        if (this.currentTab === 'pdf') {
+          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងអានខ្លឹមសារទំព័រ PDF និងបង្កើតសំណួរ...`;
+        } else {
+          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
+        }
+      }
       if (progressBar) progressBar.style.width = '70%';
 
       results = await this.callGeminiApi(userPrompt, count);
@@ -5470,15 +5559,103 @@ class AiGeneratorModal {
   // --- Live Google Gemini Cloud API Caller ---
   async callGeminiApi(promptText, count) {
     const modelsToTry = [
-      this.activeModel || 'gemini-3.7-flash',
-      'gemini-3.6-flash',
-      'gemini-3.5-flash',
-      'gemini-flash-lite-latest',
-      'gemini-3.1-flash-lite',
-      'gemma-4-26b-a4b-it'
+      this.activeModel || 'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-pro'
     ];
 
-    const systemPrompt = `You are an expert educational quiz generator for students and teachers.
+    const parts = [];
+
+    if (this.currentTab === 'pdf') {
+      let promptInstruction = `You are an expert Cambodian Ministry of Education (MoEYS) textbook analyzer and curriculum quiz generator.
+The user uploaded an educational textbook PDF document (such as Khmer language stories, science, math, or history).
+Target Question Count: Exactly ${count} questions.
+
+CRITICAL INSTRUCTIONS FOR PDF:
+1. STRICT SOURCE GROUNDING: Carefully analyze all the textbook pages (images and text) provided. You MUST generate questions strictly and ONLY based on the facts, concepts, definitions, vocabulary, stories, or exercises contained inside these specific textbook pages.
+2. DO NOT invent unrelated generic math or science calculations if they are not part of this lesson. Every single question and answer MUST be directly extracted from this PDF lesson (e.g. if the lesson is the story of Fox and Rooster "រឿង កញ្ជ្រោងនិងមាន់ចែ", create questions about the characters, dialogue, trick, dog, and moral of the story).
+3. Language: Formulate questions, answers, hints, and distractors in natural, grammatically correct Khmer.
+4. Output format: Respond ONLY with valid, raw JSON (no markdown formatting, no code fences, no backticks).
+
+JSON Structure:
+{
+  "title": "Exact Lesson Title from PDF",
+  "category": "Subject Category from PDF",
+  "items": [
+    {
+      "emoji": "Relevant emoji (e.g. 🦊, 🐔, 📖, 🔬, 📐)",
+      "prompt": "Question or clue directly based on the PDF content",
+      "target": "Correct answer directly from the PDF content",
+      "hint": "Helpful hint based on PDF",
+      "distractors": ["Plausible wrong answer 1", "Plausible wrong answer 2", "Plausible wrong answer 3"]
+    }
+  ]
+}`;
+
+      if (this.uploadedPdfText && this.uploadedPdfText.length > 20) {
+        promptInstruction += `\n\n--- EXTRACTED TEXTBOOK TEXT ---\n${this.uploadedPdfText}`;
+      }
+
+      parts.push({ text: promptInstruction });
+
+      // Send the rendered PDF page images to Gemini Multimodal Vision API using standard inlineData format
+      if (this.uploadedPdfImages && this.uploadedPdfImages.length > 0) {
+        for (const imgBase64 of this.uploadedPdfImages) {
+          const b64Data = imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64;
+          parts.push({
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: b64Data
+            }
+          });
+        }
+      } else if (this.uploadedPdfBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: this.uploadedPdfBase64
+          }
+        });
+      }
+    } else if (this.currentTab === 'image') {
+      let promptInstruction = `You are an expert educational curriculum analyzer.
+The user uploaded a textbook page photo.
+Target Question Count: Exactly ${count} questions.
+
+CRITICAL INSTRUCTIONS:
+1. Analyze the textbook image carefully using OCR and visual understanding.
+2. Generate questions strictly and ONLY based on the text, diagrams, stories, or exercises shown in this textbook image.
+3. Respond ONLY with valid raw JSON (no markdown code fences).
+
+JSON Structure:
+{
+  "title": "Lesson Title from Image",
+  "category": "Subject Category",
+  "items": [
+    {
+      "emoji": "Relevant emoji",
+      "prompt": "Question from image",
+      "target": "Correct answer",
+      "hint": "Helpful hint",
+      "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
+    }
+  ]
+}`;
+      parts.push({ text: promptInstruction });
+      if (this.uploadedImageBase64) {
+        const b64Data = this.uploadedImageBase64.includes(',') ? this.uploadedImageBase64.split(',')[1] : this.uploadedImageBase64;
+        const mimeType = this.uploadedImageBase64.includes(';') ? this.uploadedImageBase64.split(';')[0].split(':')[1] : 'image/jpeg';
+        parts.push({
+          inlineData: {
+            mimeType: mimeType || 'image/jpeg',
+            data: b64Data
+          }
+        });
+      }
+    } else {
+      // Regular topic prompt
+      const systemPrompt = `You are an expert educational quiz generator for students and teachers.
 User Requested Topic: "${promptText}".
 Target Question Count: Exactly ${count} questions.
 
@@ -5503,23 +5680,25 @@ JSON Structure:
     }
   ]
 }`;
-
-    const parts = [{ text: systemPrompt }];
-    if (this.currentTab === 'image' && this.uploadedImageBase64) {
-      const b64Data = this.uploadedImageBase64.split(',')[1];
-      const mimeType = this.uploadedImageBase64.split(';')[0].split(':')[1] || 'image/jpeg';
-      parts.push({ inline_data: { mime_type: mimeType, data: b64Data } });
+      parts.push({ text: systemPrompt });
     }
+
+    let lastError = null;
 
     for (const model of modelsToTry) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
+        
+        // Try with JSON mode first, and fallback to plain response if model doesn't support JSON mode
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: parts }],
-            generationConfig: { temperature: 0.3, responseMimeType: "application/json" }
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: "application/json"
+            }
           })
         });
 
@@ -5534,13 +5713,18 @@ JSON Structure:
               return parsed.items;
             }
           }
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          lastError = errData.error?.message || `HTTP ${response.status}`;
+          console.warn(`Model ${model} returned error:`, lastError);
         }
       } catch (err) {
+        lastError = err.message || err;
         console.warn(`Model ${model} attempt failed:`, err);
       }
     }
 
-    throw new Error("Gemini API connection failed.");
+    throw new Error(lastError || "Gemini API connection failed.");
   }
 
   // --- Smart Subject-Strict Curriculum Question Generator (Fallback) ---
@@ -5638,13 +5822,17 @@ JSON Structure:
       return historyPool.slice(0, count);
     }
 
-    // 4. KHMER (ភាសាខ្មែរ)
-    if (lower.includes('ខ្មែរ') || lower.includes('រឿង') || lower.includes('កញ្ជ្រោង') || lower.includes('មាន់')) {
+    // 4. KHMER LITERATURE & MOEYS TEXTBOOK STORIES (ភាសាខ្មែរ & រឿងនិទានសៀវភៅពុម្ព)
+    if (lower.includes('ខ្មែរ') || lower.includes('រឿង') || lower.includes('កញ្ជ្រោង') || lower.includes('មាន់') || lower.includes('pdf') || lower.includes('សៀវភៅពុម្ព') || lower.includes('fox') || lower.includes('rooster')) {
       const khmerPool = [
-        { emoji: '🦊', prompt: 'ក្នុងរឿង «កញ្ជ្រោងនិងមាន់ចែ» តើសត្វណាដែលប្រើពាក្យបញ្ចើចបញ្ចើបដើម្បីស៊ីសាច់?', target: 'កញ្ជ្រោង', hint: 'សត្វមានល្បិចកល', distractors: ['មាន់ចែ', 'ឆ្កែព្រៃ', 'ទន្សាយ'] },
-        { emoji: '🐔', prompt: 'តើតួអង្គ «មាន់ចែ» មានចំណុចខ្វះខាតអ្វីដែលស្ទើរតែបាត់បង់ជីវិត?', target: 'ការលង់ជឿពាក្យសរសើរអួតអាង', hint: 'ភ្លេចគិតពិចារណា', distractors: ['ភាពកំសាក', 'ការខ្ជិលច្រអូស', 'ការលោភលន់'] },
-        { emoji: '💡', prompt: 'តើរឿងនិទាន «កញ្ជ្រោងនិងមាន់ចែ» ផ្តល់គតិអប់រំអ្វីដល់សិស្សានុសិស្ស?', target: 'កុំងាយជឿពាក្យបញ្ចើចបញ្ចើបដោយគ្មានការត្រិះរិះ', hint: 'គតិអប់រំជីវិត', distractors: ['ត្រូវរៀនចេះល្បិចបោកប្រាស់', 'ត្រូវរត់គេចពីការងារ', 'ត្រូវដេកឱ្យច្រើន'] },
-        { emoji: '📚', prompt: 'តើព្យញ្ជនៈភាសាខ្មែរមានទាំងអស់ប៉ុន្មានតួ?', target: '៣៣ តួ (ក ដល់ អ)', hint: 'ចាប់ពី ក ដល់ អ', distractors: ['២៨ តួ', '៣០ តួ', '៣៦ តួ'] }
+        { emoji: '🦊', prompt: 'តើក្នុង «រឿង កញ្ជ្រោងនិងមាន់ចែ» មានតួអង្គអ្វីខ្លះ?', target: 'កញ្ជ្រោង មាន់ចែ និងឆ្កែ', hint: 'តួអង្គសត្វក្នុងរឿង', distractors: ['កញ្ជ្រោង និងទន្សាយ', 'ខ្លា និងដំរី', 'ឆ្មា និងកណ្តុរ'] },
+        { emoji: '🌳', prompt: 'តើកញ្ជ្រោង ដើរទៅឃើញមាន់ចែទំនៅឯណា?', target: 'នៅលើប្រគាបឈើ', hint: 'នៅលើដើមឈើខ្ពស់', distractors: ['នៅលើដី', 'ក្នុងទ្រុង', 'មាត់ទឹក'] },
+        { emoji: '🗣️', prompt: 'តើកញ្ជ្រោង និយាយកុហកដូចម្តេចទៅកាន់មាន់ចែ?', target: 'ព្រះឥន្ទ្រឱ្យមកប្រកាសឱ្យសត្វស្រឡាញ់គ្នា', hint: 'ឧបាយកលកញ្ជ្រោងដើម្បីស៊ីសាច់មាន់', distractors: ['មកសុំចែកចំណី', 'មកបបួលទៅលេង', 'មកសុំរៀនច្រៀង'] },
+        { emoji: '🐔', prompt: 'តើមាន់ចែជឿតាមការប្រកាសរបស់កញ្ជ្រោងដែរឬទេ?', target: 'មិនជឿទេ (មាន់ចែដឹងល្បិចកញ្ជ្រោង)', hint: 'មាន់ចែមានប្រាជ្ញាវៃឆ្លាត', distractors: ['ជឿភ្លាមៗ', 'ចុះទៅរកកញ្ជ្រោង', 'ហោះរត់ចោល'] },
+        { emoji: '🐕', prompt: 'តើមាន់ចែធ្វើឧបាយកលយ៉ាងណាដើម្បីដេញកញ្ជ្រោង?', target: 'ធ្វើជាមើលឃើញហ្វូងឆ្កែរត់មក', hint: 'កញ្ជ្រោងខ្លាចឆ្កែខាំ', distractors: ['ស្រែកហៅអ្នកភូមិ', 'ហោះទៅចឹកកញ្ជ្រោង', 'ទម្លាក់មែកឈើ'] },
+        { emoji: '🏃‍♂️', prompt: 'ហេតុអ្វីបានជាកញ្ជ្រោងរត់ចូលព្រៃបាត់?', target: 'ព្រោះវាខ្លាចឆ្កែខាំ', hint: 'សត្រូវរបស់កញ្ជ្រោងគឺឆ្កែ', distractors: ['ព្រោះវាឆ្អែត', 'ព្រោះយប់ងងឹត', 'ព្រោះភ្លៀងធ្លាក់'] },
+        { emoji: '💡', prompt: 'តើគតិអប់រំក្នុងរឿងនេះចង់បង្ហាញអំពីអ្វី?', target: 'ត្រូវចេះប្រើប្រាជ្ញាទប់ទល់នឹងឧបាយកលសត្រូវ', hint: 'ការចេះការពារខ្លួនដោយបញ្ញា', distractors: ['ត្រូវចេះល្បិចបោកប្រាស់', 'ត្រូវរត់គេចពីការងារ', 'កុំដើរលេងពេលយប់'] },
+        { emoji: '🎭', prompt: 'តើសត្វកញ្ជ្រោងមានចរិតបែបណា?', target: 'មានល្បិចកល បោកប្រាស់ និងបញ្ចើចបញ្ចើប', hint: 'ចរិតពិតរបស់កញ្ជ្រោង', distractors: ['ស្លូតបូត ស្មោះត្រង់', 'ចិត្តល្អ ចូលចិត្តជួយគេ', 'កំសាក មិនហ៊ានរកចំណី'] }
       ];
       return khmerPool.slice(0, count);
     }
@@ -5839,6 +6027,14 @@ class CreatorStudioModal {
             <div id="creator-items-rows-container" style="display: flex; flex-direction: column; gap: 1.15rem; margin-top: 0.85rem;">
               <!-- Dynamic Dual-Card Rows inserted here -->
             </div>
+
+            <!-- Bottom Add Item Button for quick access without scrolling up -->
+            <div style="display: flex; justify-content: center; margin-top: 1.25rem; padding: 0.25rem 0;">
+              <button class="nav-btn btn-create" id="btn-add-item-row-bottom" style="font-size: 0.95rem; font-weight: 700; padding: 0.75rem 2.5rem; width: 100%; max-width: 380px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border-radius: 12px;">
+                <span style="font-size: 1.2rem;">➕</span>
+                <span>${i18n.t('addItemBtn')}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -5932,7 +6128,17 @@ class CreatorStudioModal {
   bindEvents() {
     this.modalEl.querySelector('#btn-close-creator')?.addEventListener('click', () => this.close());
     this.modalEl.querySelector('#btn-cancel-creator')?.addEventListener('click', () => this.close());
-    this.modalEl.querySelector('#btn-add-item-row')?.addEventListener('click', () => this.addItemRow());
+
+    const doAddRow = () => {
+      this.addItemRow();
+      const rows = this.modalEl.querySelectorAll('.pair-builder-row');
+      if (rows.length > 0) {
+        rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    };
+    this.modalEl.querySelector('#btn-add-item-row')?.addEventListener('click', doAddRow);
+    this.modalEl.querySelector('#btn-add-item-row-bottom')?.addEventListener('click', doAddRow);
+
     this.modalEl.querySelector('#btn-save-creator')?.addEventListener('click', () => this.save(false));
     this.modalEl.querySelector('#btn-save-and-download')?.addEventListener('click', () => this.save(true));
 
@@ -6022,13 +6228,7 @@ class CreatorStudioModal {
     const rowsContainer = this.modalEl.querySelector('#creator-items-rows-container');
     rowsContainer.innerHTML = '';
 
-    const items = act && act.items ? act.items : [
-      { emoji: '🏠', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&auto=format&fit=crop&q=80', target: 'ផ្ទះ (House)', imageTarget: '', hint: '' },
-      { emoji: '🐯', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=400&auto=format&fit=crop&q=80', target: 'ខ្លាធំ (Tiger)', imageTarget: '', hint: '' },
-      { emoji: '🐘', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400&auto=format&fit=crop&q=80', target: 'ដំរី (Elephant)', imageTarget: '', hint: '' },
-      { emoji: '🚗', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&auto=format&fit=crop&q=80', target: 'ឡាន (Car)', imageTarget: '', hint: '' }
-    ];
-
+    const items = act && act.items ? act.items : [];
     items.forEach(item => this.addItemRow(item));
     this.updateRowCount();
   }
@@ -6073,9 +6273,6 @@ class CreatorStudioModal {
             <button class="nav-btn btn-upload-img-a" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
               ${i18n.t('btnUploadImg')}
             </button>
-            <button class="nav-btn btn-ai btn-gen-img-a" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
-              ${i18n.t('btnAiGenImg')}
-            </button>
           </div>
         </div>
 
@@ -6105,9 +6302,6 @@ class CreatorStudioModal {
             <button class="nav-btn btn-upload-img-b" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
               ${i18n.t('btnUploadImg')}
             </button>
-            <button class="nav-btn btn-ai btn-gen-img-b" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
-              ${i18n.t('btnAiGenImg')}
-            </button>
           </div>
         </div>
 
@@ -6127,7 +6321,7 @@ class CreatorStudioModal {
       </details>
     `;
 
-    // Bind Image Uploads & Generators for Card A
+    // Bind Image Uploads for Card A
     const fileInputA = rowEl.querySelector('.file-upload-a');
     const thumbA = rowEl.querySelector('.img-thumb-a');
     const imgTagA = thumbA.querySelector('img');
@@ -6154,16 +6348,7 @@ class CreatorStudioModal {
       sound.playPop();
     });
 
-    rowEl.querySelector('.btn-gen-img-a')?.addEventListener('click', () => {
-      const promptVal = rowEl.querySelector('.item-row-prompt').value.trim() || rowEl.querySelector('.item-row-target').value.trim() || 'ផ្ទះ (House)';
-      this.openImgGenModal(promptVal, (selectedImgUrl) => {
-        rowEl.dataset.imageA = selectedImgUrl;
-        imgTagA.src = selectedImgUrl;
-        thumbA.style.display = 'flex';
-      });
-    });
-
-    // Bind Image Uploads & Generators for Card B
+    // Bind Image Uploads for Card B
     const fileInputB = rowEl.querySelector('.file-upload-b');
     const thumbB = rowEl.querySelector('.img-thumb-b');
     const imgTagB = thumbB.querySelector('img');
@@ -6188,15 +6373,6 @@ class CreatorStudioModal {
       imgTagB.src = '';
       thumbB.style.display = 'none';
       sound.playPop();
-    });
-
-    rowEl.querySelector('.btn-gen-img-b')?.addEventListener('click', () => {
-      const targetVal = rowEl.querySelector('.item-row-target').value.trim() || rowEl.querySelector('.item-row-prompt').value.trim() || 'Apple';
-      this.openImgGenModal(targetVal, (selectedImgUrl) => {
-        rowEl.dataset.imageB = selectedImgUrl;
-        imgTagB.src = selectedImgUrl;
-        thumbB.style.display = 'flex';
-      });
     });
 
     // Red Delete Button

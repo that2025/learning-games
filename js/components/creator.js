@@ -103,6 +103,14 @@ export class CreatorStudioModal {
             <div id="creator-items-rows-container" style="display: flex; flex-direction: column; gap: 1.15rem; margin-top: 0.85rem;">
               <!-- Dynamic Dual-Card Rows inserted here -->
             </div>
+
+            <!-- Bottom Add Item Button for quick access without scrolling up -->
+            <div style="display: flex; justify-content: center; margin-top: 1.25rem; padding: 0.25rem 0;">
+              <button class="nav-btn btn-create" id="btn-add-item-row-bottom" style="font-size: 0.95rem; font-weight: 700; padding: 0.75rem 2.5rem; width: 100%; max-width: 380px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); border-radius: 12px;">
+                <span style="font-size: 1.2rem;">➕</span>
+                <span>${i18n.t('addItemBtn')}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -196,7 +204,17 @@ export class CreatorStudioModal {
   bindEvents() {
     this.modalEl.querySelector('#btn-close-creator')?.addEventListener('click', () => this.close());
     this.modalEl.querySelector('#btn-cancel-creator')?.addEventListener('click', () => this.close());
-    this.modalEl.querySelector('#btn-add-item-row')?.addEventListener('click', () => this.addItemRow());
+
+    const doAddRow = () => {
+      this.addItemRow();
+      const rows = this.modalEl.querySelectorAll('.pair-builder-row');
+      if (rows.length > 0) {
+        rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    };
+    this.modalEl.querySelector('#btn-add-item-row')?.addEventListener('click', doAddRow);
+    this.modalEl.querySelector('#btn-add-item-row-bottom')?.addEventListener('click', doAddRow);
+
     this.modalEl.querySelector('#btn-save-creator')?.addEventListener('click', () => this.save(false));
     this.modalEl.querySelector('#btn-save-and-download')?.addEventListener('click', () => this.save(true));
 
@@ -286,13 +304,7 @@ export class CreatorStudioModal {
     const rowsContainer = this.modalEl.querySelector('#creator-items-rows-container');
     rowsContainer.innerHTML = '';
 
-    const items = act && act.items ? act.items : [
-      { emoji: '🏠', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&auto=format&fit=crop&q=80', target: 'ផ្ទះ (House)', imageTarget: '', hint: '' },
-      { emoji: '🐯', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=400&auto=format&fit=crop&q=80', target: 'ខ្លាធំ (Tiger)', imageTarget: '', hint: '' },
-      { emoji: '🐘', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?w=400&auto=format&fit=crop&q=80', target: 'ដំរី (Elephant)', imageTarget: '', hint: '' },
-      { emoji: '🚗', prompt: '', imagePrompt: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&auto=format&fit=crop&q=80', target: 'ឡាន (Car)', imageTarget: '', hint: '' }
-    ];
-
+    const items = act && act.items ? act.items : [];
     items.forEach(item => this.addItemRow(item));
     this.updateRowCount();
   }
@@ -337,9 +349,6 @@ export class CreatorStudioModal {
             <button class="nav-btn btn-upload-img-a" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
               ${i18n.t('btnUploadImg')}
             </button>
-            <button class="nav-btn btn-ai btn-gen-img-a" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
-              ${i18n.t('btnAiGenImg')}
-            </button>
           </div>
         </div>
 
@@ -369,9 +378,6 @@ export class CreatorStudioModal {
             <button class="nav-btn btn-upload-img-b" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
               ${i18n.t('btnUploadImg')}
             </button>
-            <button class="nav-btn btn-ai btn-gen-img-b" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
-              ${i18n.t('btnAiGenImg')}
-            </button>
           </div>
         </div>
 
@@ -391,7 +397,7 @@ export class CreatorStudioModal {
       </details>
     `;
 
-    // Bind Image Uploads & Generators for Card A
+    // Bind Image Uploads for Card A
     const fileInputA = rowEl.querySelector('.file-upload-a');
     const thumbA = rowEl.querySelector('.img-thumb-a');
     const imgTagA = thumbA.querySelector('img');
@@ -418,16 +424,7 @@ export class CreatorStudioModal {
       sound.playPop();
     });
 
-    rowEl.querySelector('.btn-gen-img-a')?.addEventListener('click', () => {
-      const promptVal = rowEl.querySelector('.item-row-prompt').value.trim() || rowEl.querySelector('.item-row-target').value.trim() || 'ផ្ទះ (House)';
-      this.openImgGenModal(promptVal, (selectedImgUrl) => {
-        rowEl.dataset.imageA = selectedImgUrl;
-        imgTagA.src = selectedImgUrl;
-        thumbA.style.display = 'flex';
-      });
-    });
-
-    // Bind Image Uploads & Generators for Card B
+    // Bind Image Uploads for Card B
     const fileInputB = rowEl.querySelector('.file-upload-b');
     const thumbB = rowEl.querySelector('.img-thumb-b');
     const imgTagB = thumbB.querySelector('img');
@@ -452,15 +449,6 @@ export class CreatorStudioModal {
       imgTagB.src = '';
       thumbB.style.display = 'none';
       sound.playPop();
-    });
-
-    rowEl.querySelector('.btn-gen-img-b')?.addEventListener('click', () => {
-      const targetVal = rowEl.querySelector('.item-row-target').value.trim() || rowEl.querySelector('.item-row-prompt').value.trim() || 'Apple';
-      this.openImgGenModal(targetVal, (selectedImgUrl) => {
-        rowEl.dataset.imageB = selectedImgUrl;
-        imgTagB.src = selectedImgUrl;
-        thumbB.style.display = 'flex';
-      });
     });
 
     // Red Delete Button
