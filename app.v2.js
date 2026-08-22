@@ -5640,6 +5640,7 @@ JSON Structure:
       "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
     }
   ]
+}`;
       parts.push({ text: systemPrompt });
     }
 
@@ -7760,11 +7761,23 @@ class AppController {
   }
 }
 
-// Bootstrap on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new AppController();
-  app.init();
-  window.__APP__ = app;
-});
+// Bootstrap on DOM ready or immediately if already loaded
+function startApp() {
+  if (window.__APP_INITIALIZED__) return;
+  window.__APP_INITIALIZED__ = true;
+  try {
+    const app = new AppController();
+    app.init();
+    window.__APP__ = app;
+  } catch (err) {
+    console.error("AppController initialization error:", err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 
 // ==================== END: app.js ====================

@@ -712,6 +712,7 @@ JSON Structure:
       "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
     }
   ]
+}`;
       parts.push({ text: systemPrompt });
     }
 
