@@ -95,11 +95,8 @@ export class AiGeneratorModal {
             <button class="modal-tab-btn active" data-tab="prompt">
               <span>📝</span> <span>ប្រធានបទមេរៀន (Topic Prompt)</span>
             </button>
-            <button class="modal-tab-btn" data-tab="pdf">
-              <span>📄</span> <span>ឯកសារ PDF សៀវភៅពុម្ព</span>
-            </button>
             <button class="modal-tab-btn" data-tab="image">
-              <span>🖼️</span> <span>រូបភាពមេរៀន</span>
+              <span>🖼️</span> <span>រូបភាពមេរៀន (Lesson Image OCR)</span>
             </button>
           </div>
 
@@ -132,19 +129,10 @@ export class AiGeneratorModal {
             </div>
           </div>
 
-          <!-- Tab 2: PDF Document -->
-          <div class="ai-tab-pane" id="tab-pane-pdf" style="display: none;">
-            <div class="form-group">
-              <label class="form-label">📄 ជ្រើសរើសឯកសារ PDF សៀវភៅពុម្ពក្រសួងអប់រំ៖</label>
-              <input type="file" id="ai-pdf-file" accept=".pdf" class="form-input" />
-              <div id="ai-pdf-status-card" style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-muted);"></div>
-            </div>
-          </div>
-
-          <!-- Tab 3: Textbook Image -->
+          <!-- Tab 2: Textbook Image -->
           <div class="ai-tab-pane" id="tab-pane-image" style="display: none;">
             <div class="form-group">
-              <label class="form-label">🖼️ ផ្ទុករូបភាពទំព័រមេរៀន៖</label>
+              <label class="form-label">🖼️ ផ្ទុករូបភាពទំព័រមេរៀន / សៀវភៅពុម្ព៖</label>
               <input type="file" id="ai-img-file" accept="image/*" class="form-input" />
               <div id="ai-img-preview-wrap" style="margin-top: 0.75rem; text-align: center;"></div>
             </div>
@@ -273,9 +261,10 @@ export class AiGeneratorModal {
         btn.classList.add('active');
         this.currentTab = btn.dataset.tab;
 
-        document.getElementById('tab-pane-prompt').style.display = this.currentTab === 'prompt' ? 'block' : 'none';
-        document.getElementById('tab-pane-pdf').style.display = this.currentTab === 'pdf' ? 'block' : 'none';
-        document.getElementById('tab-pane-image').style.display = this.currentTab === 'image' ? 'block' : 'none';
+        const panePrompt = document.getElementById('tab-pane-prompt');
+        const paneImage = document.getElementById('tab-pane-image');
+        if (panePrompt) panePrompt.style.display = this.currentTab === 'prompt' ? 'block' : 'none';
+        if (paneImage) paneImage.style.display = this.currentTab === 'image' ? 'block' : 'none';
       });
     });
 
@@ -290,10 +279,6 @@ export class AiGeneratorModal {
         }
       });
     });
-
-    // PDF Upload handling
-    const pdfInput = this.modalEl.querySelector('#ai-pdf-file');
-    pdfInput?.addEventListener('change', (e) => this.handlePdfUpload(e));
 
     // Image Upload handling
     const imgInput = this.modalEl.querySelector('#ai-img-file');
@@ -572,13 +557,6 @@ export class AiGeneratorModal {
         document.getElementById('ai-prompt-input')?.focus();
         return;
       }
-    } else if (this.currentTab === 'pdf') {
-      if (!this.uploadedPdfBase64 && !this.uploadedPdfText && (!this.uploadedPdfImages || this.uploadedPdfImages.length === 0)) {
-        alert("សូមជ្រើសរើសឯកសារ PDF សៀវភៅពុម្ពជាមុនសិន!");
-        document.getElementById('ai-pdf-file')?.click();
-        return;
-      }
-      userPrompt = 'ឯកសារ PDF សៀវភៅពុម្ព';
     } else if (this.currentTab === 'image') {
       if (!this.uploadedImageBase64) {
         alert("សូមជ្រើសរើសរូបភាពទំព័រមេរៀនជាមុនសិន!");
@@ -596,8 +574,8 @@ export class AiGeneratorModal {
 
     // Step 1: Connecting
     if (thinkingStatus) {
-      if (this.currentTab === 'pdf') {
-        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនទំព័រ PDF ទៅកាន់ Google Gemini AI (Vision & OCR Analysis)...`;
+      if (this.currentTab === 'image') {
+        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនរូបភាពទំព័រមេរៀនទៅកាន់ Google Gemini AI (Vision & OCR Analysis)...`;
       } else {
         thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនប្រធានបទ <strong>"${userPrompt}"</strong> ទៅកាន់ Google Gemini Cloud...`;
       }
@@ -610,8 +588,8 @@ export class AiGeneratorModal {
     // 1. Call Google Gemini Cloud API directly
     try {
       if (thinkingStatus) {
-        if (this.currentTab === 'pdf') {
-          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងអានខ្លឹមសារទំព័រ PDF និងបង្កើតសំណួរ...`;
+        if (this.currentTab === 'image') {
+          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងអានអត្ថបទពីរូបភាព និងបង្កើតសំណួរ...`;
         } else {
           thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
         }
@@ -673,58 +651,7 @@ export class AiGeneratorModal {
 
     const parts = [];
 
-    if (this.currentTab === 'pdf') {
-      let promptInstruction = `You are an expert Cambodian Ministry of Education (MoEYS) textbook analyzer and curriculum quiz generator.
-The user uploaded an educational textbook PDF document (such as Khmer language stories, science, math, or history).
-Target Question Count: Exactly ${count} questions.
-
-CRITICAL INSTRUCTIONS FOR PDF:
-1. STRICT SOURCE GROUNDING: Carefully analyze all the textbook pages (images and text) provided. You MUST generate questions strictly and ONLY based on the facts, concepts, definitions, vocabulary, stories, or exercises contained inside these specific textbook pages.
-2. DO NOT invent unrelated generic math or science calculations if they are not part of this lesson. Every single question and answer MUST be directly extracted from this PDF lesson (e.g. if the lesson is the story of Fox and Rooster "រឿង កញ្ជ្រោងនិងមាន់ចែ", create questions about the characters, dialogue, trick, dog, and moral of the story).
-3. Language: Formulate questions, answers, hints, and distractors in natural, grammatically correct Khmer.
-4. Output format: Respond ONLY with valid, raw JSON (no markdown formatting, no code fences, no backticks).
-
-JSON Structure:
-{
-  "title": "Exact Lesson Title from PDF",
-  "category": "Subject Category from PDF",
-  "items": [
-    {
-      "emoji": "Relevant emoji (e.g. 🦊, 🐔, 📖, 🔬, 📐)",
-      "prompt": "Question or clue directly based on the PDF content",
-      "target": "Correct answer directly from the PDF content",
-      "hint": "Helpful hint based on PDF",
-      "distractors": ["Plausible wrong answer 1", "Plausible wrong answer 2", "Plausible wrong answer 3"]
-    }
-  ]
-}`;
-
-      if (this.uploadedPdfText && this.uploadedPdfText.length > 20) {
-        promptInstruction += `\n\n--- EXTRACTED TEXTBOOK TEXT ---\n${this.uploadedPdfText}`;
-      }
-
-      parts.push({ text: promptInstruction });
-
-      // Send the rendered PDF page images to Gemini Multimodal Vision API using standard inlineData format
-      if (this.uploadedPdfImages && this.uploadedPdfImages.length > 0) {
-        for (const imgBase64 of this.uploadedPdfImages) {
-          const b64Data = imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64;
-          parts.push({
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: b64Data
-            }
-          });
-        }
-      } else if (this.uploadedPdfBase64) {
-        parts.push({
-          inlineData: {
-            mimeType: 'application/pdf',
-            data: this.uploadedPdfBase64
-          }
-        });
-      }
-    } else if (this.currentTab === 'image') {
+    if (this.currentTab === 'image') {
       let promptInstruction = `You are an expert educational curriculum analyzer.
 The user uploaded a textbook page photo.
 Target Question Count: Exactly ${count} questions.
@@ -785,7 +712,6 @@ JSON Structure:
       "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
     }
   ]
-}`;
       parts.push({ text: systemPrompt });
     }
 

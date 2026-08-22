@@ -41,7 +41,8 @@ export class WhackGame {
     this.currentQuestionIdx = 0;
     this.score = 0;
     this.combo = 0;
-    this.lives = 3;
+    this.lives = this.activity.lives || 3;
+    this.moleSpeed = parseInt(this.activity.moleSpeed, 10) || 1400;
     this.hitCount = 0;
     this.holes = [];
 
@@ -50,7 +51,7 @@ export class WhackGame {
       items = DataManager.shuffleArray(items);
     }
     this.questions = items;
-    this.targetHits = Math.min(items.length * 2, 10);
+    this.targetHits = Math.max(items.length * 2, 8);
 
     this.render();
     this.setupHammerCursor();
@@ -63,17 +64,24 @@ export class WhackGame {
     arena.className = 'whack-arena-container';
 
     // Target Prompt Header
-    const currentQ = this.questions[this.currentQuestionIdx % this.questions.length];
+    const currentQ = this.questions[this.currentQuestionIdx % Math.max(1, this.questions.length)];
+    const promptText = currentQ ? currentQ.prompt : 'សូមរៀបចំសំណួរវាយកណ្តុរ';
+
     arena.innerHTML = `
-      <div class="whack-top-hud">
-        <div>
-          <span style="color: var(--text-muted); font-size: 0.82rem;">🎯 ស្វែងរកចម្លើយសម្រាប់ (Target):</span>
-          <div id="whack-current-prompt" style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">
-            ${currentQ.prompt}
+      <div class="whack-top-hud" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: rgba(15, 23, 42, 0.6); padding: 0.85rem 1.25rem; border-radius: 14px; border: 1px solid var(--panel-border); margin-bottom: 1.25rem;">
+        <div style="flex: 1; min-width: 260px;">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <span style="color: #38bdf8; font-weight: 800; font-size: 0.88rem;">🎯 ស្វែងរកចម្លើយសម្រាប់ (Target):</span>
+            <button class="nav-btn" id="btn-open-whack-editor" style="font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.75rem; background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%); border: 1px solid #ec4899; color: #f472b6; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(236, 72, 153, 0.25);">
+              🐹 រៀបចំសំណួរវាយកណ្តុរ
+            </button>
+          </div>
+          <div id="whack-current-prompt" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+            ${promptText}
           </div>
         </div>
-        <div class="whack-lives-container" id="whack-lives-wrap">
-          ❤️❤️❤️
+        <div class="whack-lives-container" id="whack-lives-wrap" style="font-size: 1.4rem; letter-spacing: 2px;">
+          ${'❤️'.repeat(Math.max(0, this.lives))}
         </div>
       </div>
 
@@ -90,6 +98,12 @@ export class WhackGame {
     `;
 
     this.container.appendChild(arena);
+
+    // Bind Whack Editor Button
+    arena.querySelector('#btn-open-whack-editor')?.addEventListener('click', () => {
+      sound.playPop();
+      document.dispatchEvent(new CustomEvent('open-whack-creator', { detail: this.activity }));
+    });
 
     // Cache hole elements
     this.holes = Array.from(this.container.querySelectorAll('.whack-hole'));
@@ -149,9 +163,10 @@ export class WhackGame {
     this.clearMoleSpawner();
     this.popMole();
 
+    const intervalTime = Math.max(800, this.moleSpeed || 1400);
     this.popupInterval = setInterval(() => {
       this.popMole();
-    }, 1600);
+    }, intervalTime);
   }
 
   clearMoleSpawner() {
@@ -162,7 +177,7 @@ export class WhackGame {
   }
 
   popMole() {
-    if (this.holes.length === 0) return;
+    if (this.holes.length === 0 || this.questions.length === 0) return;
     const randomHoleIdx = Math.floor(Math.random() * this.holes.length);
     const hole = this.holes[randomHoleIdx];
     const mole = hole.querySelector('.whack-mole');
@@ -171,33 +186,52 @@ export class WhackGame {
     if (mole.classList.contains('up')) return;
 
     const currentQ = this.questions[this.currentQuestionIdx % this.questions.length];
-    const isCorrect = Math.random() > 0.45; // 55% chance correct answer
+    const isCorrect = Math.random() > 0.45; // 55% chance correct target
+
+    // Extract target options
+    let targetOptions = [];
+    if (currentQ.targets && Array.isArray(currentQ.targets) && currentQ.targets.length > 0) {
+      targetOptions = currentQ.targets;
+    } else if (currentQ.target) {
+      targetOptions = currentQ.target.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+    }
+    if (targetOptions.length === 0) targetOptions = [currentQ.target || 'ត្រូវ'];
+
+    // Extract distractor options
+    let distractorOptions = [];
+    if (currentQ.distractors && Array.isArray(currentQ.distractors) && currentQ.distractors.length > 0) {
+      distractorOptions = currentQ.distractors;
+    } else if (typeof currentQ.distractors === 'string' && currentQ.distractors) {
+      distractorOptions = currentQ.distractors.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    if (distractorOptions.length === 0) {
+      // Fallback to other questions targets
+      const others = this.questions.filter((_, i) => i !== (this.currentQuestionIdx % this.questions.length));
+      distractorOptions = others.map(o => o.target).filter(Boolean);
+      if (distractorOptions.length === 0) distractorOptions = ['ខុស'];
+    }
 
     let label = '';
     if (isCorrect) {
-      label = currentQ.target;
+      label = targetOptions[Math.floor(Math.random() * targetOptions.length)];
       mole.dataset.isCorrect = 'true';
     } else {
-      // Pick distractor or other target
-      if (currentQ.distractors && currentQ.distractors.length > 0) {
-        label = currentQ.distractors[Math.floor(Math.random() * currentQ.distractors.length)];
-      } else {
-        const others = this.questions.filter((_, i) => i !== (this.currentQuestionIdx % this.questions.length));
-        label = others.length > 0 ? others[0].target : 'ខុស';
-      }
+      label = distractorOptions[Math.floor(Math.random() * distractorOptions.length)];
       mole.dataset.isCorrect = 'false';
     }
 
-    moleText.textContent = label.length > 18 ? label.substring(0, 16) + '...' : label;
+    moleText.textContent = label.length > 20 ? label.substring(0, 18) + '...' : label;
     mole.classList.remove('hit');
     mole.classList.add('up');
 
-    // Mole stays up for 1.3s then retreats
+    // Mole stays up for (moleSpeed * 0.85) then retreats
+    const stayUpTime = Math.max(650, Math.round((this.moleSpeed || 1400) * 0.85));
     setTimeout(() => {
       if (mole.classList.contains('up') && !mole.classList.contains('hit')) {
         mole.classList.remove('up');
       }
-    }, 1300);
+    }, stayUpTime);
   }
 
   handleMoleWhack(mole, idx) {
@@ -218,7 +252,7 @@ export class WhackGame {
       this.currentQuestionIdx++;
       const nextQ = this.questions[this.currentQuestionIdx % this.questions.length];
       const promptEl = document.getElementById('whack-current-prompt');
-      if (promptEl) promptEl.textContent = nextQ.prompt;
+      if (promptEl && nextQ) promptEl.textContent = nextQ.prompt;
 
       this.updateHUD();
 

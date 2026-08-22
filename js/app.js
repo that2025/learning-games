@@ -20,6 +20,7 @@ import { WhackGame } from './games/whack.js';
 
 // Components & Modals
 import { CreatorStudioModal } from './components/creator.js';
+import { WhackCreatorModal } from './components/whack_creator.js';
 import { ActivityManagerModal } from './components/activity_manager.js';
 import { AiGeneratorModal } from './components/ai_generator.js';
 import { ScorecardModal } from './components/leaderboard.js';
@@ -33,6 +34,7 @@ class AppController {
 
     // Component Modals
     this.creatorModal = null;
+    this.whackCreatorModal = null;
     this.managerModal = null;
     this.aiModal = null;
     this.scorecardModal = null;
@@ -71,6 +73,13 @@ class AppController {
       this.loadGame(this.currentTemplate);
     });
 
+    this.whackCreatorModal = new WhackCreatorModal((savedAct) => {
+      this.currentActivity = savedAct;
+      this.currentTemplate = 'whack';
+      this.populateActivityDropdown();
+      this.loadGame('whack');
+    });
+
     this.managerModal = new ActivityManagerModal(
       (selectedAct) => {
         this.currentActivity = selectedAct;
@@ -79,7 +88,11 @@ class AppController {
         this.loadGame(this.currentTemplate);
       },
       (editAct) => {
-        this.creatorModal.open(editAct);
+        if (editAct.defaultTemplate === 'whack') {
+          this.whackCreatorModal.open(editAct);
+        } else {
+          this.creatorModal.open(editAct);
+        }
       }
     );
 
@@ -91,7 +104,11 @@ class AppController {
         this.loadGame(this.currentTemplate);
       },
       (aiAct) => {
-        this.creatorModal.open(aiAct);
+        if (this.currentTemplate === 'whack') {
+          this.whackCreatorModal.open(aiAct);
+        } else {
+          this.creatorModal.open(aiAct);
+        }
       }
     );
 
@@ -99,6 +116,11 @@ class AppController {
       () => this.restartCurrentGame(),
       () => this.managerModal.open()
     );
+
+    // Custom Event from Whack game
+    document.addEventListener('open-whack-creator', (e) => {
+      this.whackCreatorModal.open(e.detail || this.currentActivity);
+    });
   }
 
   bindDOMEvents() {
@@ -173,13 +195,21 @@ class AppController {
     // Top CTA: Edit
     document.getElementById('btn-nav-edit-act')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack' || this.currentActivity?.defaultTemplate === 'whack') {
+        this.whackCreatorModal.open(this.currentActivity);
+      } else {
+        this.creatorModal.open(this.currentActivity);
+      }
     });
 
     // Top CTA: Create New
     document.getElementById('btn-nav-create-act')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(null);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(null);
+      } else {
+        this.creatorModal.open(null);
+      }
     });
 
     // Save File to PC (Export JSON)

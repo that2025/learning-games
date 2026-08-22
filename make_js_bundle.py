@@ -19,6 +19,7 @@ files_order = [
     os.path.join(DIR, 'js', 'components', 'leaderboard.js'),
     os.path.join(DIR, 'js', 'components', 'activity_manager.js'),
     os.path.join(DIR, 'js', 'components', 'ai_generator.js'),
+    os.path.join(DIR, 'js', 'components', 'whack_creator.js'),
     os.path.join(DIR, 'js', 'components', 'creator.js'),
     os.path.join(DIR, 'js', 'app.js'),
 ]

@@ -124,11 +124,10 @@ All 7 game engines dynamically mount into `#game-arena-container` and adapt to t
 3. **Permanent Memory**:
    - Automatically saved to `localStorage.setItem('otpg_gemini_api_key', key)` so users enter it once and never need to enter it again.
    - Includes password visibility toggle (`👁️` / `🙈`) and Clear Key button (`🗑️`).
-4. **Multimodal Input Sources & PDF Vision Integration**:
-   - **Text Topic Prompts**: Direct input with quick subject preset chips (Math, Science, History, Khmer, Animals, English).
-   - **PDF Textbook Analysis (Vision & OCR)**: Renders PDF pages to high-resolution JPEG images using PDF.js + Canvas, displays live thumbnail previews, and sends them directly to Gemini 2.0/1.5 Multimodal Vision API alongside extracted text.
-   - **Strict Grounding**: Gemini strictly analyzes the actual textbook pages and generates questions based 100% on the textbook content without inventing unrelated generic topics.
-   - **Textbook Page Image Upload**: Direct photo/screenshot upload with visual OCR analysis.
+4. **Multimodal Input Sources & Image OCR Integration**:
+   - **Text Topic Prompts**: Direct custom input with quick subject preset chips (Math, Science, History, Khmer, Animals, English).
+   - **Textbook Page Photo Upload (Vision & OCR)**: Direct photo/screenshot upload with visual OCR analysis via Google Gemini Multimodal Vision API.
+   - **Strict Grounding**: Generates questions strictly based on user-requested curriculum topics and textbook photos.
 5. **Live AI Reasoning Visualizer**:
    - Displays animated progress bar, status ticker, model badge, and review list with 1-click "🚀 Apply & Play Now" or "✏️ Open in Creator Studio".
 
@@ -139,12 +138,11 @@ All 7 game engines dynamically mount into `#game-arena-container` and adapt to t
 1. **Activity Builder**:
    - Manage title, description, category, default game template, timer, lives, auto-shuffle.
    - Add/edit/delete matching pairs (Side A / Prompt, Side B / Target, Hint, Distractors, Emoji, Image).
-2. **Multi-Source Image Generator & Search**:
-   - Curated HD 4K photo bank for common objects/animals.
-   - Live Wikimedia Commons image search API.
-   - Pollinations AI illustration and 3D clay generator.
-   - Direct file upload from PC button (`📁 ជ្រើសរូបពី PC`).
-   - Smart keyword translation (`(Tiger) -> tiger`, `ខ្លា -> tiger`, `ផ្ទះ -> house`) ensuring images strictly match the subject.
+2. **Dedicated Whack-a-Mole Studio (`whack_creator.js`)**:
+   - Custom-tailored question builder strictly for Whack-a-Mole gameplay.
+   - Question Prompt input, Multi-target correct moles (e.g. `ស្វាយ, ចេក, ក្រូច, ប៉ោម`), and Multi-distractor wrong traps (e.g. `ការ៉ុត, ស្ពៃ, ត្រកួន`).
+   - Mole Speed selector (🐢 Slow - 1.8s, 🚶‍♂️ Normal - 1.3s, ⚡ Fast - 0.9s), custom lives (3 / 5), and timer.
+   - Dedicated direct launcher button `🐹 រៀបចំសំណួរវាយកណ្តុរ` on Whack-a-Mole game screen.
 3. **Save & Export**:
    - Save to LocalStorage, Export `.json` file to PC, Import `.json` file from PC.
 

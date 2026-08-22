@@ -4311,7 +4311,8 @@ class WhackGame {
     this.currentQuestionIdx = 0;
     this.score = 0;
     this.combo = 0;
-    this.lives = 3;
+    this.lives = this.activity.lives || 3;
+    this.moleSpeed = parseInt(this.activity.moleSpeed, 10) || 1400;
     this.hitCount = 0;
     this.holes = [];
 
@@ -4320,7 +4321,7 @@ class WhackGame {
       items = DataManager.shuffleArray(items);
     }
     this.questions = items;
-    this.targetHits = Math.min(items.length * 2, 10);
+    this.targetHits = Math.max(items.length * 2, 8);
 
     this.render();
     this.setupHammerCursor();
@@ -4333,17 +4334,24 @@ class WhackGame {
     arena.className = 'whack-arena-container';
 
     // Target Prompt Header
-    const currentQ = this.questions[this.currentQuestionIdx % this.questions.length];
+    const currentQ = this.questions[this.currentQuestionIdx % Math.max(1, this.questions.length)];
+    const promptText = currentQ ? currentQ.prompt : 'សូមរៀបចំសំណួរវាយកណ្តុរ';
+
     arena.innerHTML = `
-      <div class="whack-top-hud">
-        <div>
-          <span style="color: var(--text-muted); font-size: 0.82rem;">🎯 ស្វែងរកចម្លើយសម្រាប់ (Target):</span>
-          <div id="whack-current-prompt" style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">
-            ${currentQ.prompt}
+      <div class="whack-top-hud" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background: rgba(15, 23, 42, 0.6); padding: 0.85rem 1.25rem; border-radius: 14px; border: 1px solid var(--panel-border); margin-bottom: 1.25rem;">
+        <div style="flex: 1; min-width: 260px;">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <span style="color: #38bdf8; font-weight: 800; font-size: 0.88rem;">🎯 ស្វែងរកចម្លើយសម្រាប់ (Target):</span>
+            <button class="nav-btn" id="btn-open-whack-editor" style="font-size: 0.78rem; font-weight: 700; padding: 0.3rem 0.75rem; background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%); border: 1px solid #ec4899; color: #f472b6; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 8px rgba(236, 72, 153, 0.25);">
+              🐹 រៀបចំសំណួរវាយកណ្តុរ
+            </button>
+          </div>
+          <div id="whack-current-prompt" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+            ${promptText}
           </div>
         </div>
-        <div class="whack-lives-container" id="whack-lives-wrap">
-          ❤️❤️❤️
+        <div class="whack-lives-container" id="whack-lives-wrap" style="font-size: 1.4rem; letter-spacing: 2px;">
+          ${'❤️'.repeat(Math.max(0, this.lives))}
         </div>
       </div>
 
@@ -4360,6 +4368,12 @@ class WhackGame {
     `;
 
     this.container.appendChild(arena);
+
+    // Bind Whack Editor Button
+    arena.querySelector('#btn-open-whack-editor')?.addEventListener('click', () => {
+      sound.playPop();
+      document.dispatchEvent(new CustomEvent('open-whack-creator', { detail: this.activity }));
+    });
 
     // Cache hole elements
     this.holes = Array.from(this.container.querySelectorAll('.whack-hole'));
@@ -4419,9 +4433,10 @@ class WhackGame {
     this.clearMoleSpawner();
     this.popMole();
 
+    const intervalTime = Math.max(800, this.moleSpeed || 1400);
     this.popupInterval = setInterval(() => {
       this.popMole();
-    }, 1600);
+    }, intervalTime);
   }
 
   clearMoleSpawner() {
@@ -4432,7 +4447,7 @@ class WhackGame {
   }
 
   popMole() {
-    if (this.holes.length === 0) return;
+    if (this.holes.length === 0 || this.questions.length === 0) return;
     const randomHoleIdx = Math.floor(Math.random() * this.holes.length);
     const hole = this.holes[randomHoleIdx];
     const mole = hole.querySelector('.whack-mole');
@@ -4441,33 +4456,52 @@ class WhackGame {
     if (mole.classList.contains('up')) return;
 
     const currentQ = this.questions[this.currentQuestionIdx % this.questions.length];
-    const isCorrect = Math.random() > 0.45; // 55% chance correct answer
+    const isCorrect = Math.random() > 0.45; // 55% chance correct target
+
+    // Extract target options
+    let targetOptions = [];
+    if (currentQ.targets && Array.isArray(currentQ.targets) && currentQ.targets.length > 0) {
+      targetOptions = currentQ.targets;
+    } else if (currentQ.target) {
+      targetOptions = currentQ.target.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+    }
+    if (targetOptions.length === 0) targetOptions = [currentQ.target || 'ត្រូវ'];
+
+    // Extract distractor options
+    let distractorOptions = [];
+    if (currentQ.distractors && Array.isArray(currentQ.distractors) && currentQ.distractors.length > 0) {
+      distractorOptions = currentQ.distractors;
+    } else if (typeof currentQ.distractors === 'string' && currentQ.distractors) {
+      distractorOptions = currentQ.distractors.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    if (distractorOptions.length === 0) {
+      // Fallback to other questions targets
+      const others = this.questions.filter((_, i) => i !== (this.currentQuestionIdx % this.questions.length));
+      distractorOptions = others.map(o => o.target).filter(Boolean);
+      if (distractorOptions.length === 0) distractorOptions = ['ខុស'];
+    }
 
     let label = '';
     if (isCorrect) {
-      label = currentQ.target;
+      label = targetOptions[Math.floor(Math.random() * targetOptions.length)];
       mole.dataset.isCorrect = 'true';
     } else {
-      // Pick distractor or other target
-      if (currentQ.distractors && currentQ.distractors.length > 0) {
-        label = currentQ.distractors[Math.floor(Math.random() * currentQ.distractors.length)];
-      } else {
-        const others = this.questions.filter((_, i) => i !== (this.currentQuestionIdx % this.questions.length));
-        label = others.length > 0 ? others[0].target : 'ខុស';
-      }
+      label = distractorOptions[Math.floor(Math.random() * distractorOptions.length)];
       mole.dataset.isCorrect = 'false';
     }
 
-    moleText.textContent = label.length > 18 ? label.substring(0, 16) + '...' : label;
+    moleText.textContent = label.length > 20 ? label.substring(0, 18) + '...' : label;
     mole.classList.remove('hit');
     mole.classList.add('up');
 
-    // Mole stays up for 1.3s then retreats
+    // Mole stays up for (moleSpeed * 0.85) then retreats
+    const stayUpTime = Math.max(650, Math.round((this.moleSpeed || 1400) * 0.85));
     setTimeout(() => {
       if (mole.classList.contains('up') && !mole.classList.contains('hit')) {
         mole.classList.remove('up');
       }
-    }, 1300);
+    }, stayUpTime);
   }
 
   handleMoleWhack(mole, idx) {
@@ -4488,7 +4522,7 @@ class WhackGame {
       this.currentQuestionIdx++;
       const nextQ = this.questions[this.currentQuestionIdx % this.questions.length];
       const promptEl = document.getElementById('whack-current-prompt');
-      if (promptEl) promptEl.textContent = nextQ.prompt;
+      if (promptEl && nextQ) promptEl.textContent = nextQ.prompt;
 
       this.updateHUD();
 
@@ -4989,11 +5023,8 @@ class AiGeneratorModal {
             <button class="modal-tab-btn active" data-tab="prompt">
               <span>📝</span> <span>ប្រធានបទមេរៀន (Topic Prompt)</span>
             </button>
-            <button class="modal-tab-btn" data-tab="pdf">
-              <span>📄</span> <span>ឯកសារ PDF សៀវភៅពុម្ព</span>
-            </button>
             <button class="modal-tab-btn" data-tab="image">
-              <span>🖼️</span> <span>រូបភាពមេរៀន</span>
+              <span>🖼️</span> <span>រូបភាពមេរៀន (Lesson Image OCR)</span>
             </button>
           </div>
 
@@ -5026,19 +5057,10 @@ class AiGeneratorModal {
             </div>
           </div>
 
-          <!-- Tab 2: PDF Document -->
-          <div class="ai-tab-pane" id="tab-pane-pdf" style="display: none;">
-            <div class="form-group">
-              <label class="form-label">📄 ជ្រើសរើសឯកសារ PDF សៀវភៅពុម្ពក្រសួងអប់រំ៖</label>
-              <input type="file" id="ai-pdf-file" accept=".pdf" class="form-input" />
-              <div id="ai-pdf-status-card" style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--text-muted);"></div>
-            </div>
-          </div>
-
-          <!-- Tab 3: Textbook Image -->
+          <!-- Tab 2: Textbook Image -->
           <div class="ai-tab-pane" id="tab-pane-image" style="display: none;">
             <div class="form-group">
-              <label class="form-label">🖼️ ផ្ទុករូបភាពទំព័រមេរៀន៖</label>
+              <label class="form-label">🖼️ ផ្ទុករូបភាពទំព័រមេរៀន / សៀវភៅពុម្ព៖</label>
               <input type="file" id="ai-img-file" accept="image/*" class="form-input" />
               <div id="ai-img-preview-wrap" style="margin-top: 0.75rem; text-align: center;"></div>
             </div>
@@ -5167,9 +5189,10 @@ class AiGeneratorModal {
         btn.classList.add('active');
         this.currentTab = btn.dataset.tab;
 
-        document.getElementById('tab-pane-prompt').style.display = this.currentTab === 'prompt' ? 'block' : 'none';
-        document.getElementById('tab-pane-pdf').style.display = this.currentTab === 'pdf' ? 'block' : 'none';
-        document.getElementById('tab-pane-image').style.display = this.currentTab === 'image' ? 'block' : 'none';
+        const panePrompt = document.getElementById('tab-pane-prompt');
+        const paneImage = document.getElementById('tab-pane-image');
+        if (panePrompt) panePrompt.style.display = this.currentTab === 'prompt' ? 'block' : 'none';
+        if (paneImage) paneImage.style.display = this.currentTab === 'image' ? 'block' : 'none';
       });
     });
 
@@ -5184,10 +5207,6 @@ class AiGeneratorModal {
         }
       });
     });
-
-    // PDF Upload handling
-    const pdfInput = this.modalEl.querySelector('#ai-pdf-file');
-    pdfInput?.addEventListener('change', (e) => this.handlePdfUpload(e));
 
     // Image Upload handling
     const imgInput = this.modalEl.querySelector('#ai-img-file');
@@ -5466,13 +5485,6 @@ class AiGeneratorModal {
         document.getElementById('ai-prompt-input')?.focus();
         return;
       }
-    } else if (this.currentTab === 'pdf') {
-      if (!this.uploadedPdfBase64 && !this.uploadedPdfText && (!this.uploadedPdfImages || this.uploadedPdfImages.length === 0)) {
-        alert("សូមជ្រើសរើសឯកសារ PDF សៀវភៅពុម្ពជាមុនសិន!");
-        document.getElementById('ai-pdf-file')?.click();
-        return;
-      }
-      userPrompt = 'ឯកសារ PDF សៀវភៅពុម្ព';
     } else if (this.currentTab === 'image') {
       if (!this.uploadedImageBase64) {
         alert("សូមជ្រើសរើសរូបភាពទំព័រមេរៀនជាមុនសិន!");
@@ -5490,8 +5502,8 @@ class AiGeneratorModal {
 
     // Step 1: Connecting
     if (thinkingStatus) {
-      if (this.currentTab === 'pdf') {
-        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនទំព័រ PDF ទៅកាន់ Google Gemini AI (Vision & OCR Analysis)...`;
+      if (this.currentTab === 'image') {
+        thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនរូបភាពទំព័រមេរៀនទៅកាន់ Google Gemini AI (Vision & OCR Analysis)...`;
       } else {
         thinkingStatus.innerHTML = `🌐 កំពុងបញ្ជូនប្រធានបទ <strong>"${userPrompt}"</strong> ទៅកាន់ Google Gemini Cloud...`;
       }
@@ -5504,8 +5516,8 @@ class AiGeneratorModal {
     // 1. Call Google Gemini Cloud API directly
     try {
       if (thinkingStatus) {
-        if (this.currentTab === 'pdf') {
-          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងអានខ្លឹមសារទំព័រ PDF និងបង្កើតសំណួរ...`;
+        if (this.currentTab === 'image') {
+          thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងអានអត្ថបទពីរូបភាព និងបង្កើតសំណួរ...`;
         } else {
           thinkingStatus.innerHTML = `🧠 Google Gemini AI (${this.activeModel}) កំពុងគិត និងប្រើប្រាស់ AI Cloud បង្កើតសំណួរ...`;
         }
@@ -5567,58 +5579,7 @@ class AiGeneratorModal {
 
     const parts = [];
 
-    if (this.currentTab === 'pdf') {
-      let promptInstruction = `You are an expert Cambodian Ministry of Education (MoEYS) textbook analyzer and curriculum quiz generator.
-The user uploaded an educational textbook PDF document (such as Khmer language stories, science, math, or history).
-Target Question Count: Exactly ${count} questions.
-
-CRITICAL INSTRUCTIONS FOR PDF:
-1. STRICT SOURCE GROUNDING: Carefully analyze all the textbook pages (images and text) provided. You MUST generate questions strictly and ONLY based on the facts, concepts, definitions, vocabulary, stories, or exercises contained inside these specific textbook pages.
-2. DO NOT invent unrelated generic math or science calculations if they are not part of this lesson. Every single question and answer MUST be directly extracted from this PDF lesson (e.g. if the lesson is the story of Fox and Rooster "រឿង កញ្ជ្រោងនិងមាន់ចែ", create questions about the characters, dialogue, trick, dog, and moral of the story).
-3. Language: Formulate questions, answers, hints, and distractors in natural, grammatically correct Khmer.
-4. Output format: Respond ONLY with valid, raw JSON (no markdown formatting, no code fences, no backticks).
-
-JSON Structure:
-{
-  "title": "Exact Lesson Title from PDF",
-  "category": "Subject Category from PDF",
-  "items": [
-    {
-      "emoji": "Relevant emoji (e.g. 🦊, 🐔, 📖, 🔬, 📐)",
-      "prompt": "Question or clue directly based on the PDF content",
-      "target": "Correct answer directly from the PDF content",
-      "hint": "Helpful hint based on PDF",
-      "distractors": ["Plausible wrong answer 1", "Plausible wrong answer 2", "Plausible wrong answer 3"]
-    }
-  ]
-}`;
-
-      if (this.uploadedPdfText && this.uploadedPdfText.length > 20) {
-        promptInstruction += `\n\n--- EXTRACTED TEXTBOOK TEXT ---\n${this.uploadedPdfText}`;
-      }
-
-      parts.push({ text: promptInstruction });
-
-      // Send the rendered PDF page images to Gemini Multimodal Vision API using standard inlineData format
-      if (this.uploadedPdfImages && this.uploadedPdfImages.length > 0) {
-        for (const imgBase64 of this.uploadedPdfImages) {
-          const b64Data = imgBase64.includes(',') ? imgBase64.split(',')[1] : imgBase64;
-          parts.push({
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: b64Data
-            }
-          });
-        }
-      } else if (this.uploadedPdfBase64) {
-        parts.push({
-          inlineData: {
-            mimeType: 'application/pdf',
-            data: this.uploadedPdfBase64
-          }
-        });
-      }
-    } else if (this.currentTab === 'image') {
+    if (this.currentTab === 'image') {
       let promptInstruction = `You are an expert educational curriculum analyzer.
 The user uploaded a textbook page photo.
 Target Question Count: Exactly ${count} questions.
@@ -5679,7 +5640,6 @@ JSON Structure:
       "distractors": ["Wrong answer 1", "Wrong answer 2", "Wrong answer 3"]
     }
   ]
-}`;
       parts.push({ text: systemPrompt });
     }
 
@@ -5920,6 +5880,398 @@ JSON Structure:
 }
 
 // ==================== END: ai_generator.js ====================
+
+// ==================== START: whack_creator.js ====================
+/* ==========================================================================
+   🐹 Whack-a-Mole Dedicated Question & Traps Studio
+   Ou Ta Pruk Educational Games (ល្បែងសិក្សាអូរតាប្រុក)
+   Dedicated builder for Whack-a-Mole: Questions, Correct Moles, Wrong Traps & Speed
+   ========================================================================== */
+
+
+
+
+
+
+class WhackCreatorModal {
+  constructor(onSaveCallback) {
+    this.onSaveCallback = onSaveCallback;
+    this.modalEl = null;
+    this.currentActivity = null;
+    this.initDOM();
+  }
+
+  initDOM() {
+    this.modalEl = document.createElement('div');
+    this.modalEl.className = 'modal-overlay';
+    this.modalEl.id = 'modal-whack-creator';
+    this.modalEl.style.zIndex = '1050';
+
+    this.modalEl.innerHTML = `
+      <div class="modal-window" style="max-width: 780px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%); border-bottom: 1px solid rgba(236, 72, 153, 0.3);">
+          <div class="modal-title-wrap">
+            <span style="font-size: 1.5rem;">🐹</span>
+            <div>
+              <span class="modal-title" style="color: #f472b6;">រៀបចំសំណួរ & ចម្លើយល្បែងវាយកណ្តុរ</span>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem;">
+                កំណត់សំណួរ ចម្លើយត្រូវដែលត្រូវវាយ (Targets) និងចម្លើយខុសបញ្ឆោត (Traps)
+              </div>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="btn-close-whack-creator">&times;</button>
+        </div>
+
+        <div class="modal-body" style="gap: 1.15rem; max-height: 72vh; overflow-y: auto;">
+          <!-- Activity General Settings -->
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--panel-border); border-radius: 12px; padding: 0.9rem 1.1rem;">
+            <div class="form-row-2" style="margin-bottom: 0.6rem;">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700;">📝 ចំណងជើងមេរៀន / ល្បែង៖</label>
+                <input type="text" class="form-input" id="whack-meta-title" placeholder="ឧ. មេរៀនសត្វស្លាប និងសត្វជើង៤, វិធីបូកលេខ..." />
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700;">⚡ ល្បឿនចេញកណ្តុរ (Mole Speed)៖</label>
+                <select class="form-select" id="whack-meta-speed" style="font-weight: 700;">
+                  <option value="1800">🐢 យឺត (Slow - 1.8s)</option>
+                  <option value="1300" selected>🚶‍♂️ មធ្យម (Normal - 1.3s)</option>
+                  <option value="900">⚡ លឿន (Fast - 0.9s)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700;">❤️ ចំនួនជីវិត (Lives)៖</label>
+                <select class="form-select" id="whack-meta-lives">
+                  <option value="3" selected>❤️❤️❤️ ៣ ជីវិត (3 Lives)</option>
+                  <option value="5">❤️❤️❤️❤️❤️ ៥ ជីវិត (5 Lives)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-weight: 700;">⏱️ កំណត់ពេល (វិនាទី)៖</label>
+                <input type="number" class="form-input" id="whack-meta-timer" value="60" min="10" max="300" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Whack Questions List -->
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
+              <div style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;">
+                <span>🎯</span>
+                <span>បញ្ជីសំណួរវាយកណ្តុរ</span>
+                <span id="whack-questions-count-badge" class="arena-badge" style="background: rgba(236, 72, 153, 0.2); color: #f472b6; border-color: rgba(236, 72, 153, 0.4);">
+                  0 សំណួរ
+                </span>
+              </div>
+            </div>
+
+            <!-- Dynamic Question Cards Container -->
+            <div id="whack-questions-container" style="display: flex; flex-direction: column; gap: 1rem;">
+              <!-- Inserted dynamically -->
+            </div>
+
+            <!-- Bottom Add Question Button -->
+            <div style="display: flex; justify-content: center; margin-top: 1.25rem;">
+              <button class="nav-btn btn-create" id="btn-add-whack-q" style="font-size: 0.95rem; font-weight: 700; padding: 0.75rem 2.5rem; width: 100%; max-width: 400px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); box-shadow: 0 4px 15px rgba(236, 72, 153, 0.35); border-radius: 12px;">
+                <span style="font-size: 1.2rem;">➕</span>
+                <span>បន្ថែមសំណួរវាយកណ្តុរថ្មី</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="file" id="whack-file-import" accept=".json" style="display: none;" />
+            <button class="nav-btn" id="btn-whack-import-json">📥 នាំចូល JSON</button>
+            <button class="nav-btn" id="btn-whack-export-json">📤 ទាញយក JSON</button>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="nav-btn" id="btn-cancel-whack-creator">បោះបង់</button>
+            <button class="nav-btn btn-create" id="btn-save-whack-creator" style="background: linear-gradient(135deg, #ec4899 0%, #10b981 100%); font-weight: 700; padding: 0.55rem 1.4rem;">
+              💾 រក្សាទុក & លេងភ្លាម (Save & Play)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(this.modalEl);
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    this.modalEl.querySelector('#btn-close-whack-creator')?.addEventListener('click', () => this.close());
+    this.modalEl.querySelector('#btn-cancel-whack-creator')?.addEventListener('click', () => this.close());
+
+    // Add Question
+    this.modalEl.querySelector('#btn-add-whack-q')?.addEventListener('click', () => {
+      this.addQuestionRow();
+      const rows = this.modalEl.querySelectorAll('.whack-editor-card');
+      if (rows.length > 0) {
+        rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+
+    // Save
+    this.modalEl.querySelector('#btn-save-whack-creator')?.addEventListener('click', () => this.save());
+
+    // Import / Export JSON
+    const fileInput = this.modalEl.querySelector('#whack-file-import');
+    this.modalEl.querySelector('#btn-whack-import-json')?.addEventListener('click', () => fileInput?.click());
+    fileInput?.addEventListener('change', (e) => this.handleImport(e));
+    this.modalEl.querySelector('#btn-whack-export-json')?.addEventListener('click', () => this.handleExport());
+  }
+
+  open(activity = null) {
+    this.currentActivity = activity;
+    const titleInput = this.modalEl.querySelector('#whack-meta-title');
+    const speedSelect = this.modalEl.querySelector('#whack-meta-speed');
+    const livesSelect = this.modalEl.querySelector('#whack-meta-lives');
+    const timerInput = this.modalEl.querySelector('#whack-meta-timer');
+    const container = this.modalEl.querySelector('#whack-questions-container');
+
+    container.innerHTML = '';
+
+    if (activity) {
+      const actTitle = typeof activity.title === 'object' ? (activity.title.km || activity.title.en) : activity.title;
+      titleInput.value = actTitle || 'ល្បែងវាយកណ្តុរ (Whack-a-Mole)';
+      speedSelect.value = activity.moleSpeed || '1300';
+      livesSelect.value = activity.lives || 3;
+      timerInput.value = activity.timerSec || 60;
+
+      const items = activity.items || [];
+      if (items.length > 0) {
+        items.forEach(item => this.addQuestionRow(item));
+      } else {
+        this.addQuestionRow();
+      }
+    } else {
+      titleInput.value = '';
+      speedSelect.value = '1300';
+      livesSelect.value = 3;
+      timerInput.value = 60;
+
+      // Start with 1 clean sample row or empty
+      this.addQuestionRow({
+        prompt: 'តើពាក្យណាជាឈ្មោះសត្វស្លាប (Birds)?',
+        target: 'ក្ងោក, សេក, ចាប, មាន់, ទា',
+        distractors: ['ខ្លា', 'ដំរី', 'ក្រពើ', 'ត្រី', 'ពស់']
+      });
+    }
+
+    this.updateCountBadge();
+    this.modalEl.classList.add('active');
+    sound.playPop();
+  }
+
+  close() {
+    this.modalEl.classList.remove('active');
+    sound.playPop();
+  }
+
+  addQuestionRow(itemData = null) {
+    const container = this.modalEl.querySelector('#whack-questions-container');
+    const rowEl = document.createElement('div');
+    rowEl.className = 'whack-editor-card';
+    rowEl.style.cssText = 'background: rgba(15, 23, 42, 0.75); border: 1px solid var(--panel-border); border-radius: 14px; padding: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s ease;';
+
+    const prompt = itemData?.prompt || '';
+    
+    // Support targets array, comma-separated string, or single target
+    let correctStr = '';
+    if (itemData?.targets && Array.isArray(itemData.targets)) {
+      correctStr = itemData.targets.join(', ');
+    } else if (itemData?.target) {
+      correctStr = itemData.target;
+    }
+
+    // Support distractors array or comma-separated string
+    let wrongStr = '';
+    if (itemData?.distractors && Array.isArray(itemData.distractors)) {
+      wrongStr = itemData.distractors.join(', ');
+    } else if (typeof itemData?.distractors === 'string') {
+      wrongStr = itemData.distractors;
+    }
+
+    rowEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.4rem;">
+        <span class="whack-card-index" style="font-weight: 800; color: #38bdf8; font-size: 0.92rem;">🎯 សំណួរ</span>
+        <button class="btn-delete-row" title="លុបសំណួរ" style="font-size: 1.2rem; line-height: 1; padding: 0.2rem 0.5rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 8px; cursor: pointer;">&times;</button>
+      </div>
+
+      <!-- Question Prompt Input -->
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-weight: 700; color: var(--text-main); font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>❓</span> <span>សំណួរ ឬប្រធានបទគោលដៅ (Question Prompt)៖</span>
+        </label>
+        <input type="text" class="form-input whack-q-prompt" value="${prompt}" placeholder="ឧ. តើពាក្យណាជាឈ្មោះផ្លែឈើ? ឬ តើ ៤៥ + ៣៥ = ?" />
+      </div>
+
+      <!-- Correct Targets (Moles to Hit) -->
+      <div class="form-group" style="margin-bottom: 0.75rem;">
+        <label class="form-label" style="font-weight: 700; color: #34d399; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>✅</span> <span>ចម្លើយត្រូវ (កណ្តុរត្រូវវាយយកពិន្ទុ - បំបែកដោយសញ្ញាក្បៀស , )៖</span>
+        </label>
+        <input type="text" class="form-input whack-q-correct" value="${correctStr}" style="border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.05);" placeholder="ឧ. ស្វាយ, ចេក, ក្រូច, ប៉ោម (អាចវាយពាក្យជាច្រើន)" />
+        <div style="font-size: 0.75rem; color: #a7f3d0; margin-top: 0.25rem;">
+          💡 កណ្តុរដែលកាន់ពាក្យទាំងនេះ នឹងលោតចេញមកឱ្យអ្នកលេងវាយយកពិន្ទុ
+        </div>
+      </div>
+
+      <!-- Wrong Distractors (Traps / Moles NOT to Hit) -->
+      <div class="form-group" style="margin-bottom: 0.25rem;">
+        <label class="form-label" style="font-weight: 700; color: #f87171; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+          <span>❌</span> <span>ចម្លើយខុស / បញ្ឆោត (កណ្តុរហាមវាយ - បំបែកដោយសញ្ញាក្បៀស , )៖</span>
+        </label>
+        <input type="text" class="form-input whack-q-wrong" value="${wrongStr}" style="border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.05);" placeholder="ឧ. ការ៉ុត, ស្ពៃ, ត្រកួន, ម្ទេស (អាចវាយពាក្យជាច្រើន)" />
+        <div style="font-size: 0.75rem; color: #fca5a5; margin-top: 0.25rem;">
+          ⚠️ បើអ្នកលេងច្រឡំវាយលើកណ្តុរដែលកាន់ពាក្យទាំងនេះ នឹងត្រូវដកជីវិត ❤️
+        </div>
+      </div>
+    `;
+
+    rowEl.querySelector('.btn-delete-row')?.addEventListener('click', () => {
+      sound.playPop();
+      rowEl.remove();
+      this.updateCountBadge();
+    });
+
+    container.appendChild(rowEl);
+    this.updateCountBadge();
+  }
+
+  updateCountBadge() {
+    const rows = this.modalEl.querySelectorAll('.whack-editor-card');
+    const badge = this.modalEl.querySelector('#whack-questions-count-badge');
+    if (badge) badge.textContent = `${rows.length} សំណួរ`;
+
+    // Re-index titles
+    rows.forEach((row, i) => {
+      const idxEl = row.querySelector('.whack-card-index');
+      if (idxEl) idxEl.textContent = `🎯 សំណួរទី ${i + 1}`;
+    });
+  }
+
+  save() {
+    const title = this.modalEl.querySelector('#whack-meta-title').value.trim() || 'ល្បែងវាយកណ្តុរ (Whack-a-Mole)';
+    const speed = parseInt(this.modalEl.querySelector('#whack-meta-speed').value, 10) || 1300;
+    const lives = parseInt(this.modalEl.querySelector('#whack-meta-lives').value, 10) || 3;
+    const timer = parseInt(this.modalEl.querySelector('#whack-meta-timer').value, 10) || 60;
+
+    const rows = this.modalEl.querySelectorAll('.whack-editor-card');
+    const items = [];
+
+    rows.forEach(row => {
+      const prompt = row.querySelector('.whack-q-prompt').value.trim();
+      const correctStr = row.querySelector('.whack-q-correct').value.trim();
+      const wrongStr = row.querySelector('.whack-q-wrong').value.trim();
+
+      if (prompt || correctStr) {
+        const correctList = correctStr ? correctStr.split(/[,|、]+/).map(s => s.trim()).filter(Boolean) : ['ចម្លើយត្រូវ'];
+        const wrongList = wrongStr ? wrongStr.split(/[,|、]+/).map(s => s.trim()).filter(Boolean) : ['ចម្លើយខុស'];
+
+        items.push({
+          emoji: '🐹',
+          prompt: prompt || 'ស្វែងរកចម្លើយត្រឹមត្រូវ',
+          target: correctList[0],
+          targets: correctList,
+          distractors: wrongList,
+          hint: ''
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      alert("សូមបញ្ចូលយ៉ាងហោចណាស់ ១ សំណួរ សម្រាប់ល្បែងវាយកណ្តុរ!");
+      return;
+    }
+
+    const activityData = {
+      id: this.currentActivity?.id || `whack_${Date.now()}`,
+      title: { km: title, en: title },
+      description: { km: 'ល្បែងវាយកណ្តុរអន្តរកម្ម', en: 'Interactive Whack-a-Mole Game' },
+      category: { km: 'វាយកណ្តុរ', en: 'Whack-a-Mole' },
+      defaultTemplate: 'whack',
+      moleSpeed: speed,
+      timerSec: timer,
+      lives: lives,
+      items: items
+    };
+
+    dataManager.saveActivity(activityData);
+
+    if (this.onSaveCallback) {
+      this.onSaveCallback(activityData);
+    }
+
+    sound.playVictory();
+    particles.fireCelebration();
+    this.close();
+  }
+
+  handleExport() {
+    const title = this.modalEl.querySelector('#whack-meta-title').value.trim() || 'whack_game';
+    const rows = this.modalEl.querySelectorAll('.whack-editor-card');
+    const items = [];
+
+    rows.forEach(row => {
+      const prompt = row.querySelector('.whack-q-prompt').value.trim();
+      const correctStr = row.querySelector('.whack-q-correct').value.trim();
+      const wrongStr = row.querySelector('.whack-q-wrong').value.trim();
+
+      if (prompt || correctStr) {
+        const correctList = correctStr.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+        const wrongList = wrongStr.split(/[,|、]+/).map(s => s.trim()).filter(Boolean);
+
+        items.push({
+          emoji: '🐹',
+          prompt: prompt,
+          target: correctList[0] || '',
+          targets: correctList,
+          distractors: wrongList
+        });
+      }
+    });
+
+    const exportObj = {
+      id: `whack_${Date.now()}`,
+      title: title,
+      defaultTemplate: 'whack',
+      items: items
+    };
+
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/\s+/g, '_')}_whack.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    sound.playPop();
+  }
+
+  handleImport(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const parsed = JSON.parse(evt.target.result);
+        this.open(parsed);
+        sound.playMatch();
+      } catch (err) {
+        alert("ឯកសារ JSON មិនត្រឹមត្រូវ!");
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// ==================== END: whack_creator.js ====================
 
 // ==================== START: creator.js ====================
 /* ==========================================================================
@@ -6899,6 +7251,7 @@ class CreatorStudioModal {
 
 
 
+
 class AppController {
   constructor() {
     this.currentActivity = null;
@@ -6908,6 +7261,7 @@ class AppController {
 
     // Component Modals
     this.creatorModal = null;
+    this.whackCreatorModal = null;
     this.managerModal = null;
     this.aiModal = null;
     this.scorecardModal = null;
@@ -6946,6 +7300,13 @@ class AppController {
       this.loadGame(this.currentTemplate);
     });
 
+    this.whackCreatorModal = new WhackCreatorModal((savedAct) => {
+      this.currentActivity = savedAct;
+      this.currentTemplate = 'whack';
+      this.populateActivityDropdown();
+      this.loadGame('whack');
+    });
+
     this.managerModal = new ActivityManagerModal(
       (selectedAct) => {
         this.currentActivity = selectedAct;
@@ -6954,7 +7315,11 @@ class AppController {
         this.loadGame(this.currentTemplate);
       },
       (editAct) => {
-        this.creatorModal.open(editAct);
+        if (editAct.defaultTemplate === 'whack') {
+          this.whackCreatorModal.open(editAct);
+        } else {
+          this.creatorModal.open(editAct);
+        }
       }
     );
 
@@ -6966,7 +7331,11 @@ class AppController {
         this.loadGame(this.currentTemplate);
       },
       (aiAct) => {
-        this.creatorModal.open(aiAct);
+        if (this.currentTemplate === 'whack') {
+          this.whackCreatorModal.open(aiAct);
+        } else {
+          this.creatorModal.open(aiAct);
+        }
       }
     );
 
@@ -6974,6 +7343,11 @@ class AppController {
       () => this.restartCurrentGame(),
       () => this.managerModal.open()
     );
+
+    // Custom Event from Whack game
+    document.addEventListener('open-whack-creator', (e) => {
+      this.whackCreatorModal.open(e.detail || this.currentActivity);
+    });
   }
 
   bindDOMEvents() {
@@ -7048,13 +7422,21 @@ class AppController {
     // Top CTA: Edit
     document.getElementById('btn-nav-edit-act')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(this.currentActivity);
+      if (this.currentTemplate === 'whack' || this.currentActivity?.defaultTemplate === 'whack') {
+        this.whackCreatorModal.open(this.currentActivity);
+      } else {
+        this.creatorModal.open(this.currentActivity);
+      }
     });
 
     // Top CTA: Create New
     document.getElementById('btn-nav-create-act')?.addEventListener('click', () => {
       sound.playPop();
-      this.creatorModal.open(null);
+      if (this.currentTemplate === 'whack') {
+        this.whackCreatorModal.open(null);
+      } else {
+        this.creatorModal.open(null);
+      }
     });
 
     // Save File to PC (Export JSON)
